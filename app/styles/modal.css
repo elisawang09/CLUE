@@ -1,0 +1,207 @@
+/* Modal Overlay */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+}
+
+/* Modal Content Container */
+.modal-content {
+    background-color: white;
+    border-radius: 12px;
+    border: 3px solid #34495e;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal Header */
+.modal-header {
+    background-color: #34495e;
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 9px 9px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.modal-header h2 {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.close-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e74c3c;
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.close-button:hover {
+    background-color: #c0392b;
+}
+
+/* Summary Section */
+.summary-section {
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.summary-section h3 {
+    font-size: 1rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.summary-content {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    line-height: 1.8;
+    color: #495057;
+}
+
+.summary-content p {
+    margin-bottom: 1rem;
+}
+
+.summary-content strong {
+    color: #2c3e50;
+}
+
+.summary-content ul {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.summary-content li {
+    margin-bottom: 0.5rem;
+}
+
+/* DAG Section */
+.dag-section {
+    padding: 2rem;
+}
+
+.dag-section h3 {
+    font-size: 1rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.dag-container {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    min-height: 400px;
+    position: relative;
+    overflow: visible;
+}
+
+/* DAG SVG Styles */
+.dag-container svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* DAG Node Styles */
+.node-rect {
+    stroke-width: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.node-rect:hover {
+    opacity: 0.8;
+}
+
+.node-text {
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+}
+
+.node-subtext {
+    font-size: 10px;
+    fill: #495057;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* DAG Link Styles */
+.link {
+    fill: none;
+    stroke: #7f8c8d;
+    stroke-width: 2px;
+}
+
+.link-arrow {
+    fill: #7f8c8d;
+}
+
+.link-label {
+    font-size: 11px;
+    fill: #555;
+    pointer-events: none;
+}
+
+/* Layer Labels */
+.layer-label {
+    font-size: 11px;
+    font-weight: bold;
+    fill: #6c757d;
+    text-transform: uppercase;
+}
+
+/* Operation Node (Circle/Ellipse) */
+.operation-node {
+    fill: #f0f3f4;
+    stroke: #34495e;
+    stroke-width: 2px;
+}
+
+.operation-text {
+    font-size: 18px;
+    font-weight: bold;
+    fill: #2c3e50;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+    .modal {
+        padding: 1rem;
+    }
+
+    .modal-content {
+        max-height: 95vh;
+    }
+
+    .summary-section,
+    .dag-section {
+        padding: 1rem;
+    }
+}

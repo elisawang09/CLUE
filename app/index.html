@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="stylesheet" href="styles/modal.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>CLUE</h1>
+    </header>
+
+    <!-- Main Dashboard Content -->
+    <main class="dashboard">
+        <!-- Dashboard Title Section -->
+        <div class="dashboard-title">
+            <h2>📊 Jaffle Shop Monthly Revenue Dashboard</h2>
+            <p class="dashboard-subtitle">
+                Overview of key business and revenue metrics
+            </p>
+        </div>
+
+        <div class="dashboard-container">
+
+            <!-- Chart 1: Revenue Trend -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Monthly Revenue Trend</h2>
+                    <button class="info-icon" data-metric="total_revenue" aria-label="View metric details">
+                        <span>i</span>
+                    </button>
+                </div>
+                <div id="chart-revenue" class="chart-content"></div>
+            </div>
+
+            <!-- Chart 2: Monthly New Orders -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Monthly New Orders</h2>
+                    <button class="info-icon" data-metric="new-orders" aria-label="View metric details">
+                        <span>i</span>
+                    </button>
+                </div>
+                <div id="chart-new-orders" class="chart-content"></div>
+            </div>
+
+            <!-- Chart 3: Pct of large orders -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Percentage of Large Orders in This Month</h2>
+                    <button class="info-icon" data-metric="large-order-pct" aria-label="View metric details">
+                        <span>i</span>
+                    </button>
+                </div>
+                <div id="chart-large-number" class="chart-content"></div>
+            </div>
+
+            <!-- Chart 4:Revenue by Store Location -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2>Revenue by Store Location</h2>
+                    <button class="info-icon" data-metric="store-revenue" aria-label="View metric details">
+                        <span>i</span>
+                    </button>
+                </div>
+                <div id="chart-store-revenue" class="chart-content"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Transformation Details -->
+    <div id="transformation-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Metric Transformation</h2>
+                <button class="close-button" aria-label="Close modal">&times;</button>
+            </div>
+
+            <!-- Transformation Summary Section -->
+            <section class="summary-section">
+                <h3>📄 Transformation Summary</h3>
+                <div id="summary-content" class="summary-content">
+                    <!-- AI-generated summary will be inserted here -->
+                </div>
+            </section>
+
+            <!-- DAG Visualization Section -->
+            <section class="dag-section">
+                <h3>🔗 Transformation Lineage</h3>
+                <div id="dag-container" class="dag-container">
+                    <!-- D3.js DAG will be rendered here -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- D3.js Library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
