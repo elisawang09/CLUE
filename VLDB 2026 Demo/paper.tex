@@ -1,0 +1,115 @@
+\documentclass[sigconf, nonacm]{acmart}
+
+\usepackage{xspace}
+\usepackage{balance}
+\usepackage{graphics}
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xspace}
+\usepackage{microtype}
+\usepackage{ccicons}
+\usepackage{todonotes}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{relsize}
+\usepackage{caption}
+\usepackage{amsthm}
+\newtheorem{example}{Example}
+
+\newcommand\vldbdoi{XX.XX/XXX.XX}
+\newcommand\vldbpages{XXX-XXX}
+\newcommand\vldbvolume{XX}
+\newcommand\vldbissue{XX}
+\newcommand\vldbyear{2026}
+\newcommand\vldbauthors{\authors}
+\newcommand\vldbtitle{\shorttitle} 
+\newcommand\vldbavailabilityurl{}
+\newcommand\vldbpagestyle{plain} 
+\newcommand{\stepCounter}[1]{{\Large\textcircled{{\small#1}}}}
+
+\captionsetup{font=small} 
+\usepackage[normalem]{ulem}
+\hypersetup{
+  colorlinks,
+  urlcolor=blue}
+\renewcommand*{\UrlFont}{\ttfamily\smaller\relax}
+
+\newcommand{\af}[1]{[\textcolor{red}{AF: #1}]}
+\newcommand{\wc}[1]{[\textcolor{blue}{WC: #1}]}
+\newcommand{\ew}[1]{[\textcolor{purple}{EW: #1}]}
+\newcommand{\mj}[1]{[\textcolor{Green}{MJ: #1}]}
+
+\newcommand\clue{\textsc{CLUE}\xspace}
+\newcommand{\subtabref}[1]{(\subref{#1})}
+
+\settopmatter{authorsperrow=4}
+
+\begin{document}
+\pagestyle{plain}
+\title{\clue: }
+
+\author{Elisa Wang}
+\affiliation{%
+  \institution{University of Utah}
+  \city{Salt Lake City}
+  \state{Utah}
+  \country{USA}}
+\email{email}
+
+\author{Whanhee Cho}
+\affiliation{%
+  \institution{University of Utah}
+  \city{Salt Lake City}
+  \state{Utah}
+  \country{USA}}
+\email{email}
+
+\author{Mahmood Jasim}
+\affiliation{%
+  \institution{}
+  \city{}
+  \state{}
+  \country{USA}}
+\email{email}
+
+\author{Anna Fariha}
+\affiliation{%
+  \institution{University of Utah}
+  \city{Salt Lake City}
+  \state{Utah}
+  \country{USA}}
+\email{afariha@cs.utah.edu}
+
+
+\begin{abstract} 
+\end{abstract}
+
+\maketitle
+
+\pagestyle{\vldbpagestyle}
+
+
+\ifdefempty{\vldbavailabilityurl}{}{
+\vspace{.3cm}
+\begingroup\small\noindent\raggedright\textbf{PVLDB Artifact Availability:}\\
+The source code, data, and/or other artifacts have been made available at \url{\vldbavailabilityurl}.
+\endgroup
+}
+%%% VLDB block end %%%
+
+
+\input{1_introduction.tex}
+\input{2_system-overview.tex}
+\input{3_demo.tex}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{paper}
+
+\end{document}
+\endinput
