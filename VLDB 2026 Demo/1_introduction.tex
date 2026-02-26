@@ -3,3 +3,22 @@
 \section{Introduction} 
 
 \subsection*{Related Work}
+\wc{TODO: Need to comeback when we have the final system design.}
+% provenance graphs or relevant works
+Provenance/lineage graphs~\cite{DBLP:journals/tods/ChapmanLMT24,
+DBLP:journals/tvcg/CaiGXYWXWLW25,DBLP:conf/deem/PinaCK0M24} show the data flow
+and transformations in various domains such as
+databases~\cite{DBLP:journals/corr/abs-0912-5340, DBLP:conf/icdt/BunemanKT01},
+and machine learning pipelines~\cite{DBLP:conf/deem/PinaCK0M24,
+DBLP:journals/tods/ChapmanLMT24}. However, they often lack the ability to
+effectively visualize intermediate results, which are crucial for understanding
+the data transformations and debugging processes but instead force users to
+inspect the process them along with the graph structure.
+% visualizing data transformation
+Visualization of intermediate results~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21,
+DBLP:conf/chi/WangLDM025}. DataFormulator2~\cite{DBLP:conf/chi/WangLDM025}
+provide systems for users to transform and visualize intermediate results rather
+than showing the provenance graph structure. And
+Lux~\cite{DBLP:conf/chi/WangLDM025} visualizes the intermediate insights in
+jupyter notebook. However, they do not show the data flow and transformations in
+the provenance graph.
