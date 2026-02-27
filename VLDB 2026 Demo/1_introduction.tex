@@ -3,22 +3,23 @@
 \section{Introduction} 
 
 \subsection*{Related Work}
-\wc{TODO: Need to comeback when we have the final system design.}
+\wc{@Elisa could you check the related work section if it looks good?}
 % provenance graphs or relevant works
 Provenance/lineage graphs~\cite{DBLP:journals/tods/ChapmanLMT24,
 DBLP:journals/tvcg/CaiGXYWXWLW25,DBLP:conf/deem/PinaCK0M24} show the data flow
 and transformations in various domains such as
 databases~\cite{DBLP:journals/corr/abs-0912-5340, DBLP:conf/icdt/BunemanKT01},
 and machine learning pipelines~\cite{DBLP:conf/deem/PinaCK0M24,
-DBLP:journals/tods/ChapmanLMT24}. However, they often lack the ability to
-effectively visualize intermediate results, which are crucial for understanding
-the data transformations and debugging processes but instead force users to
-inspect the process them along with the graph structure.
+DBLP:journals/tods/ChapmanLMT24}. However, while they often focus on changes in
+the data and transformations, they do not discuss what these transformations
+mean in terms of metrics, and how the transformation meanings are related to the
+final results. 
 % visualizing data transformation
-Visualization of intermediate results~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21,
-DBLP:conf/chi/WangLDM025}. DataFormulator2~\cite{DBLP:conf/chi/WangLDM025}
-provide systems for users to transform and visualize intermediate results rather
-than showing the provenance graph structure. And
-Lux~\cite{DBLP:conf/chi/WangLDM025} visualizes the intermediate insights in
-jupyter notebook. However, they do not show the data flow and transformations in
-the provenance graph.
+Visualization of intermediate
+transformations~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21,
+DBLP:conf/chi/WangLDM025} allow users to transform and explore data
+interactively. DataFormulator2~\cite{DBLP:conf/chi/WangLDM025} provides an
+environment for transforming and visualizing intermediate results, while
+Lux~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21} surfaces intermediate insights
+directly in Jupyter notebooks. However, neither discusses how transformations
+relate to the final results in terms of metrics.
