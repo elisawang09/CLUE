@@ -38,14 +38,66 @@ the metric itself. In practice, many analytic questions begin with a dashboard
 metric (e.g., ``Why did revenue drop?'') rather than a dataset. To support the
 trust of data-driven decision-making, provenance information must move beyond
 data-centric lineage and provide accessible, metric-centric explanations that
-help non-technical users understand how complex metrics are derived.
-
-\input{figures/example.tex}
+help non-technical users understand how complex metrics are derived. We
+highlight the need for a system that shows lineage and provenance of metrics.
 
 \begin{example}
-\wc{@Elisa after finishing the demo scenario, please fill out this example with the scenario.}
-\wc{First, it should be a simple scenario that why the current works are not working.}
+Sheldon is a data analyst at an e-commere company. He is responsible for
+monitoring the predictive liftetime value (PLTV) of customers, which can be a
+great metric to understand the long-term value of custmers. He got granted
+access to a dashboard that shows the PLTV metric, but he has no idea how the
+PLTV metric is computed. He wants to understand how the PLTV metric is computed,
+and what are the intermediate metrics that contribute to the final PLTV metric.
+The transformation steps he sees on the dashboard are shown in the left of
+Figure~\ref{tab:metrics}. From those transformation steps, he needs to go
+through all the steps forward and backward to understand how the PLTV metric is
+computed. First, in T100, he finds that three metrics, \texttt{prob\_active},
+\texttt{expected\_orders}, and \texttt{expected\_order\_value}, are used to
+compute the PLTV metric. Then, he needs to understand how those three metrics
+are computed. And go through the same process for each of those three metrics. 
 \end{example}
+
+This example highlights the challenges of understanding how user-focused metrics
+are computed, especially when the transformation logic is complex and involves
+multiple intermediate metrics. However, even though the dashboard can show the
+metric hierarchy and the transformation using existing tools such as~\cite{}, it
+still requires what are those metrics requiring the explanations.
+
+\begin{example}
+After manual exploring, Sheldon extracts the metric lineage shown in the right
+of Figure~\ref{tab:metrics}. From the metric lineage, he can see that the PLTV
+metric is computed using various metrics such as \texttt{prob\_active},
+\texttt{expected\_orders}, and \texttt{expected\_order\_value}. And also, each
+of those metrics is computed using various sub-metrics. However, he still does
+not what those metrics mean, specifically, what are the definitions of those
+metrics, and how they are computed. For instance, to see how the
+\texttt{prob\_active} metric is computed, he needs to see the transformation
+steps more closely. He finds that the \texttt{prob\_active} metric is computed
+using \wc{Elisa please put the transformation steps here.} To understand what
+the metric means, he needs to go through all the transformation steps, and
+understand what those steps mean.
+\end{example}
+
+Above example shows that even if the dashboard can show the metric lineage and
+the transformation steps, it still requires users to understand what those
+metrics mean, and how they are computed. To understand the meaning of a metric,
+users need to understand the transformation steps that define the metric, and
+how those steps relate to the final metric. This process is tedious and requires
+users to understand the technical details of the transformation logic, which can
+be a barrier for non-technical users. Therefore, there is a need for a system
+that can automatically extract and visualize the transformation steps that
+define a metric, and provide explanations of what those steps mean in terms of
+the final metric. Such a system would help users understand how metrics are
+computed, and improve their trust in the reported numbers.
+
+We introduce \clue, a system that automatically extracts and visualizes the
+transformation steps that define a metric, and provides explanations of what
+those steps mean in terms of the final metric. \clue captures the transformation
+logic that defines a metric, and visualizes the metric lineage and the
+transformation steps in an interactive dashboard. Users can explore the metric
+lineage and the transformation steps, and see how each step contributes to the
+final metric. 
+\wc{We should discuss how could we get the metrics. Is it pre-defined? Or we can automatically extract the metrics from the transformation steps?}
 
 \subsection*{Related Work}
 \wc{@Elisa could you check the related work section if it looks good?}
