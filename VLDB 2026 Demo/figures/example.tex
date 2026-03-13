@@ -1,0 +1,73 @@
+\begin{figure*}[h]
+\centering
+\small
+
+\begin{minipage}[t]{0.45\linewidth}
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Transformation} & \textbf{Description} \\
+\midrule
+T1       & Normalize column \texttt{age} $\rightarrow$ \texttt{age\_group} \\
+T2       & Trim whitespace in column \texttt{name} \\
+T3       & Remove rows with missing \texttt{purchase\_date} \\
+$\vdots$ & $\vdots$  \\
+T100     & Compute \texttt{conversion\_rate} per user segment \\
+\bottomrule
+\end{tabular}
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.50\linewidth}
+\centering
+\raisebox{-15mm}{
+\begin{tikzpicture}[
+  sibling distance=8em, 
+  level distance=3em,
+  metric/.style = {
+      shape=rectangle,
+      rounded corners,
+      draw=gray!50,              
+      fill=red!10,               
+      align=center,
+      minimum width=2.0cm,
+      minimum height=0.3cm,
+      text=black,                  % text color
+      font=\small,
+  },
+  edge from parent/.style={
+      draw, -{Stealth[round]}, 
+      edge from parent path={(\tikzparentnode.south) -- ++(0,-0.2cm) -| (\tikzchildnode.north)}
+  }
+]
+\node[metric] {final metric}
+child { node[metric, fill=blue!10] {metric 1} 
+    child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } }
+  child { node[metric, fill=green!50] {metric 2}
+    child { node[metric, fill=green!10] {metric 2-1} 
+      child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } } 
+    child { node[metric, fill=green!20] {metric 2-2} 
+          child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } }  
+    child { node[metric, fill=green!40] {metric 2-3} 
+          child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } } 
+    child { node[metric, fill=green!30] {metric 2-4} 
+          child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } } 
+  }
+  child { node[metric, fill=yellow!10] {metric 3}
+    child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } 
+  };
+\end{tikzpicture}
+}
+\end{minipage}
+
+\caption{\textbf{Left:} Example transformations applied to a dataset.
+\textbf{Right:} Example metric hierarchy showing how a final metric can be
+decomposed into sub-metrics.}
+\label{tab:metrics}
+\wc{@Elisa please change the dummy metrics to something more meaningful.}
+\end{figure*}
