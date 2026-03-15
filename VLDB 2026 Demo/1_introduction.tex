@@ -1,46 +1,52 @@
 %!TEX root=paper.tex
 
 \section{Introduction} 
+% First introduce the general problem: data visualization on dashboards.
+Data visualization on dashboards are widely used by companies and non-profit
+organizations in various industries to inform decision making. Such
+visualizations are often driven by complex data pipelines, where multiple data
+sources are transformed. The transformations such as joins, filters, and
+aggregations are applied to raw data. 
+% introdce the metric after data visualization on dashboards.
+Especially, metrics are commonly used to summarize and track key performance
+indicators such as revenue, conversion rate, and customer lifetime value.
+However, these visualizations typically present only the final aggregated
+values. The intermediate computation steps, such as the underlying data sources,
+transformation logic, and component metrics, are hidden. When the context or
+derivation of a metric is unclear, users may misinterpret trends, struggle to
+diagnose anomalies, or lose trust in the reported numbers~\cite{}. Therefore,
+improving transparency into how metrics are computed, including their
+intermediate components and data provenance, is critical for helping users
+accurately interpret dashboard visualizations and make informed decisions.
 
-%!TEX root=paper.tex
+\wc{@Elisa I changed the the general problem be data visualization on dashboards. I think only mentioning dashboards are not enough when we begin the paper.}
 
-\section{Introduction} 
-Visualizing data transformations on dashboards are widely used by companies and
-non-profit organizations in various industries to inform decision making. By
-summarizing large volumes of data into visual trends and aggregated metrics,
-dashboards enable users to monitor system performance and detect patterns or
-anomalies. However, these visualizations typically present only the final
-aggregated value of metrics. The intermediate computation steps, such as the
-underlying data sources, transformation logic, and component metrics, are
-hidden. When the context or derivation of a metric is unclear, users may
-misinterpret trends, struggle to diagnose anomalies, or lose trust in the
-reported numbers~\cite{}. Therefore, improving transparency into how metrics are
-computed, including their intermediate components and data provenance, is
-critical for helping users accurately interpret dashboard visualizations and
-make informed decisions.
-
-To improve transparency in data pipelines, data lineage and provenance systems
-have been developed to support data quality monitoring and governance of modern
-data pipelines. Platforms such as Collibra~\cite{} and OpenMetadata~\cite{}
-capture dependencies between datasets, tables, and attributes, enabling data
-professionals to trace the origin and flow of data. While lineage graphs can
-reveal where a metric's underlying data originates, the transformation logic
-that defines the metric, such as aggregations, filters, joins, and derived
-submetrics, often remains in SQL models or ETL scripts. As a result,
+% Introduce what data lineage and provenance systems are, and how they can help
+% with understanding the data transformation steps. Then, introduce the
+% limitations of existing data lineage and provenance system.
+Data lineage and provenance systems are designed to capture the flow of data
+through various transformations in data pipelines usually visualized as graphs.
+They have been developed to support data quality monitoring and governance of
+data pipelines. Commercial software such as Collibra~\cite{} and
+OpenMetadata~\cite{} capture dependencies between datasets, tables, and
+attributes, enabling data professionals to trace the origin and flow of data.
+While lineage graphs can reveal where a metric's underlying data originates, the
+transformation logic often remains in SQL models or ETL scripts. As a result,
 understanding how a metric is computed still requires inspecting source code,
-which creates additional effort even for technical users.
+which creates additional effort even for technical users. Moreover existing
+lineage systems focus on dataset-level lineage rather than explaining the
+semantics of transformations that define business metrics. This limitation is
+more pronounced for non-technical stakeholders, who care less about which tables
+or columns produce a metric but more about how to interpret the metric itself.
+In practice, many analytic questions begin with a dashboard metric (e.g., ``Why
+did revenue drop?'') rather than a dataset.
+% 
+We highlight the challenges of understanding how metrics manually are computed
+through the following example.
 
-Moreover, existing lineage systems focus on dataset-level lineage rather than
-explaining the semantics of transformations that define business metrics. This
-limitation is more pronounced for non-technical stakeholders, who care less
-about which tables or columns produce a metric but more about how to interpret
-the metric itself. In practice, many analytic questions begin with a dashboard
-metric (e.g., ``Why did revenue drop?'') rather than a dataset. To support the
-trust of data-driven decision-making, provenance information must move beyond
-data-centric lineage and provide accessible, metric-centric explanations that
-help non-technical users understand how complex metrics are derived. We
-highlight the need for a system that shows lineage and provenance of metrics.
+\input{figures/example.tex}
 
+% An example of the challenges of understanding how metrics are computed.
 \begin{example}
 Sheldon is a data analyst at an e-commere company. He is responsible for
 monitoring the predictive liftetime value (PLTV) of customers, which can be a
@@ -54,14 +60,26 @@ through all the steps forward and backward to understand how the PLTV metric is
 computed. First, in T100, he finds that three metrics, \texttt{prob\_active},
 \texttt{expected\_orders}, and \texttt{expected\_order\_value}, are used to
 compute the PLTV metric. Then, he needs to understand how those three metrics
-are computed. And go through the same process for each of those three metrics. 
+are computed. And go through the same process for each of the rest of the
+metrics until he reaches the raw data. 
 \end{example}
 
-This example highlights the challenges of understanding how user-focused metrics
-are computed, especially when the transformation logic is complex and involves
-multiple intermediate metrics. However, even though the dashboard can show the
-metric hierarchy and the transformation using existing tools such as~\cite{}, it
-still requires what are those metrics requiring the explanations.
+This example highlights the challenges of understanding how metrics are
+computed, especially when the transformation logic is complex and involves
+multiple intermediate metrics. It requires users to manually explore the
+transformation steps, and understand how those steps relate to the final metric.
+This process is tedious and requires users to understand the technical details
+of the transformation logic, which can be a barrier for non-technical users.
+However, even though the dashboard can show the metric lineage and the
+transformation, it still requires what are those metrics requiring the
+explanations. For instance, to understand what the \texttt{prob\_active} metric
+means, users need to understand the transformation steps that define the
+\texttt{prob\_active} metric. Therefore, there is a need for a system that can
+automatically extract and visualize the transformation steps that define a
+metric, and provide explanations of what those steps mean in terms of the final
+metric. We highlight the need for a system to explain the meaning of metrics by
+showing the transformation steps that define the mtric in the follwing example.
+\wc{Here, showing the transformation steps sounds quite confusing since we can just show the transformation steps without showing the meaning of those steps. I'll change the term soon.}
 
 \begin{example}
 After manual exploring, Sheldon extracts the metric lineage shown in the right
@@ -99,7 +117,13 @@ lineage and the transformation steps, and see how each step contributes to the
 final metric. 
 \wc{We should discuss how could we get the metrics. Is it pre-defined? Or we can automatically extract the metrics from the transformation steps?}
 
-\subsection*{Related Work}
+To support the trust of data-driven decision-making, provenance information must
+move beyond data-centric lineage and provide accessible, metric-centric
+explanations that help non-technical users understand how complex metrics are
+derived. We highlight the need for a system that shows lineage and provenance of
+metrics.
+
+\smallskip \noindent \emph{\underline{Related Work.}} 
 \wc{@Elisa could you check the related work section if it looks good?}
 % provenance graphs or relevant works
 Provenance/lineage graphs~\cite{DBLP:journals/tods/ChapmanLMT24,
@@ -120,3 +144,6 @@ environment for transforming and visualizing intermediate results, while
 Lux~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21} surfaces intermediate insights
 directly in Jupyter notebooks. However, neither discusses how transformations
 relate to the final results in terms of metrics.
+
+\smallskip \noindent \emph{\underline{Demonstration.}} In our demonstration,
+participants will observe \clue's capability to X
