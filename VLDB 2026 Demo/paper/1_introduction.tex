@@ -1,0 +1,192 @@
+%!TEX root=paper.tex
+
+\section{Introduction} 
+Data visualizations on dashboards are ubiquitous across industries and play a
+central role in supporting decision-making at all organizational levels. Such
+visualizations are often driven by complex data pipelines, where data from
+multiple sources is integrated and transformed using operations such as joins,
+filters, and aggregations. Through a series of transformations, raw data is
+converted into business metrics on dashboards, enabling organizations to
+summarize and track key performance indicators such as revenue, conversion rate,
+and customer lifetime value. These metrics are essential for monitoring business
+health, identifying trends, and making informed decisions. However, the
+intermediate transformation steps and underlying data--source data and
+transformation logic--are often hidden, as these visualizations typically
+present only the final aggregated metrics. This lack of transparency into how
+metrics are computed leads to challenges for users unfamiliar with them, causing them to misinterpret
+trends, struggle to diagnose anomalies, or lose trust in the reported
+numbers~\cite{matheus2020data}.
+
+% Introduce what data lineage and provenance systems are, and how they can help
+% with understanding the data transformation steps. Then, introduce the
+% limitations of existing data lineage and provenance system.
+ A common way users engage with dashboard metrics is through goal-driven
+ \texttt{how-to} questions such as ``\textit{How can we increase this
+ metric?}''. However, without a clear understanding of how the metric is
+ calculated, these questions become difficult to answer. Data lineage and
+ provenance systems~\cite{galhotra2022hyper, DBLP:conf/sigmod/MeliouS12} are
+ designed to expose this information by capturing the flow of data through
+ transformations in data pipelines. Commercial software such as
+Commercial software such as Collibra~\cite{collibra}
+ % and OpenMetadata~\cite{openmetadata} 
+ captures dependencies between databases, tables, and attributes, enabling both
+ technical and non-technical users to trace the origin and flow of data. While
+ these lineage graphs can reveal where a metric's underlying data originates,
+ the transformation logic often remains in SQL models or ETL scripts. As a
+ result, understanding how a metric is computed still requires inspecting source
+ code, which creates additional effort even for data professionals. Moreover,
+ existing lineage systems focus on dataset-level lineage rather than explaining
+ the semantics of transformations that define business metrics. This limitation
+ is more pronounced for non-technical stakeholders, who care less about which
+ tables or columns produce a metric, but more about how to interpret the metric
+ itself. 
+%
+In summary, these limitations mean current systems cannot answer \texttt{how-to}
+questions since (1)~they do not extract and represent metric lineage
+automatically to show how metrics are related, and (2)~they lack interactive
+explanations of how such metrics can be increased or decreased.
+% 
+We first highlight the challenges of manually understanding metric lineage
+through the following example.
+
+\input{figures/example.tex}
+
+\begin{example}
+Sheldon is a new-hired data analyst at an e-commerce company and recently assigned a
+project to grow the predictive lifetime value (\metric{PLTV}) of customers. \metric{PLTV} is a key business metric that estimates the total revenue a customer is expected to generate over their relationship with the company, making it central to decisions around customer acquisition, retention, and long-term growth. As someone new to the company’s operations, Sheldon is not yet familiar with what drives \metric{PLTV}. Although he is given access to a dashboard that reports the metric, it doesn't provide explanation of how \metric{PLTV} is computed. To answer his question ``How can we increase \metric{PLTV}?'', Sheldon must first understand how it is defined.
+%
+As the logic is not explicitly shown in the dashboard and the company's data lineage system, Sheldon
+needs to look at the underlying implementation. He manually inspects the SQL code that defines the metric, and examines the
+sequence of transformation steps shown in Figure~\ref{tab:metrics}. From these
+steps, he attempts to trace how \metric{PLTV} is derived. He first observes that
+in T100, \metric{PLTV} is computed using three intermediate metrics:
+\metric{prob\_active}, \metric{expected\_orders}, and
+\metric{expected\_order\_value}. He then recursively traces each of these
+metrics backward through the transformation pipeline to understand their
+origins. 
+
+When tracing \metric{expected\_order\_value}, Sheldon discovers that it depends
+on a sequence of transformations (T20, T21, T22, T50, T97, T98, T99). These
+transformations start from raw data and are joined and aggregated to compute
+intermediate metrics. T50 derives the \metric{\#\_orders} submetric, while (T20,
+T21, T22, T97, T98) derive \metric{\#\_total\_gross\_value}, which are then used
+to compute \metric{expected\_order\_value} in T99. Sheldon now needs to again
+manually inspect for tracing \metric{prob\_active} and \metric{expected\_orders}
+to fully understand how \metric{PLTV} is computed. %\ew{Do you think the number here should align with what we show in demo? If so, then we only have 3 submetrics and each has two child nodes.} \wc{Yes, but for now I made the examples as a approximate 3-ary tree though.} 
+Sheldon finds that there are
+5 submetrics arranged as an approximate 3-ary tree of depth 5, giving at most
+$\frac{3^5-1}{2} = 121$ nodes, $120$ directed edges, and $3^4 = 81$ root-to-leaf
+paths, requiring at most $120 + 81 = 201$ edges and paths, hence $2 \times 201 =
+402$ traversals forward and backward. Since Sheldon must hold the entire lineage
+structure, this process makes him lose track of the metric lineage of
+\metric{expected\_order\_value} after just a few steps through \metric{prob\_active}.
+\end{example}
+
+% \wc{We need to decide if we're going to use sub-metric or submetric.} \ew{Submetric is commonly used in the context of BI tool.}
+This example highlights the challenges of understanding how metrics are
+computed, especially when the transformation logic is complex and involves
+multiple intermediate metrics. It requires users to manually explore the
+transformation steps and understand how those steps relate to the final metric.
+This process can extract the metric lineage, showing how the final metric is
+derived from intermediate metrics, and how those intermediate metrics are
+derived from other submetrics. Tools such as SQLGlot~\cite{sqlglot} can help
+users understand transformation steps by parsing SQL code. However, SQL parsing
+alone does not help users understand how metrics are related. Therefore, a
+system is needed to automatically extract metric lineage and represent
+relationships among metrics.
+
+In addition to extracting metric lineage to answer \texttt{how-to} questions,
+users must still interpret what each intermediate metric \textit{means}, not
+just how it connects. For example, even if Sheldon can see that \metric{PLTV}
+depends on \metric{expected\_order\_value}, the structural relationship alone is
+not enough, he still needs to understand how to increase \metric{PLTV} by
+adjusting \metric{expected\_order\_value} and other submetrics. However, since
+there are multiple submetrics and multiple adjustment strategies, Sheldon cannot
+easily determine how changes in individual intermediate submetrics would affect
+\metric{PLTV}. This points to the need for a system that can suggest feasible
+adjustment strategies over dependent metrics and propagate those changes to
+satisfy a target goal. We highlight the need for explaining the meaning of
+transformations in the following example.
+
+\begin{example}
+After manually exploring the transformation pipeline, Sheldon extracts the
+metric lineage shown in the right of Figure~\ref{tab:metrics}. From the
+\metric{PLTV} lineage, he can see that \metric{PLTV} is computed from multiple
+intermediate metrics, including \metric{prob\_active},
+\metric{expected\_orders}, and \metric{expected\_order\_value}, each of which in
+turn is derived from other submetrics.
+%
+Despite understanding these dependencies, Sheldon encounters new challenges when
+trying to answer ``How can we change \metric{PLTV} value?'' Specifically, he
+wants to know ``How can we increase \metric{PLTV} by 20\%?'' and ``How to
+achieve a certain increase in \metric{PLTV}?''.  Multiple adjustment strategies
+are possible, for example, he could choose to increase one of the three
+intermediate metrics by 20\%, or distribute the increase across multiple metrics
+, such as 10\% for \metric{prob\_active} and 10\% for \metric{expected\_orders}.
+However, Sheldon cannot determine how changes in the intermediate metrics would
+propagate to the final metric, and how to adjust the intermediate metrics to
+achieve the desired change in \metric{PLTV}. 
+%
+With up to 5 levels of metrics, each with 3 submetrics, there are up to $2^{120}
+\approx 10^{36}$ possible strategies across all 120 nodes. Moreover, determining
+the adjustment range for each metric is itself a non-trivial task, further
+increasing the search space. With such a large number of possibilities, Sheldon
+cannot easily determine how changes in individual intermediate submetrics would
+affect \metric{PLTV}. Even if he could compute the expected change in
+\metric{PLTV} for each strategy, he would still need to manually compare them
+all to determine which is best.
+\end{example}
+
+The example above illustrates the challenges of answering \texttt{how-to}
+provenance questions on metric lineages. Even when a user understands the metric
+lineage, determining which metrics to adjust and by how much to achieve a
+desired outcome requires navigating an exponentially large search space. This
+motivates the need for a systematic approach that can automatically identify
+effective adjustment strategies and explain how changes in component metrics
+propagate to the final metric.
+
+We introduce \clue, a system that automatically extracts and visualizes the
+transformation steps that define a metric, and provides simulation capabilities
+to support metric adjustment. \clue captures the transformation logic that
+defines a metric, and visualizes the metric lineage and the transformation steps
+in an interactive dashboard. Users can explore the metric lineage and the
+transformation steps, and see how each step contributes to the final metric. As
+users explore the transformation steps, they can also see how changes in the
+final metric change intermediate metrics, and how to adjust intermediate
+metrics and data. \clue is built upon a SQL-based data pipeline where metrics
+are defined through multi-layer transformations. Assuming that dashboard
+metadata and the upstream data pipeline are accessible, CLUE automatically
+extracts transformation operations and metric dependencies from those sources.
+
+To support the trust of data-driven decision-making, provenance information must
+move beyond data-centric lineage and provide accessible, metric-centric
+explanations that help non-technical users understand how complex metrics are
+derived. We highlight the need for a system that shows the lineage and provenance of
+metrics.
+
+\smallskip \noindent \emph{\underline{Related Work.}} 
+% \wc{@Elisa could you check the related work section if it looks good?}
+% provenance graphs or relevant works
+Provenance/lineage graphs show the data flow and transformations in various
+domains such as databases~\cite{DBLP:conf/sigmod/MeliouS12,galhotra2022hyper}
+for \texttt{how-to} questions, and machine learning
+pipelines~\cite{DBLP:conf/deem/PinaCK0M24, DBLP:journals/tods/ChapmanLMT24}.
+However, while they often focus on changes in the data and transformations, they
+do not discuss what these transformations mean in terms of metrics, and how the
+transformation meanings are related to the final results. 
+% visualizing data transformation
+Visualization of intermediate
+transformations~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21,
+DBLP:conf/chi/WangLDM025} allow users to transform and explore data
+interactively. DataFormulator2~\cite{DBLP:conf/chi/WangLDM025} provides an
+environment for transforming and visualizing intermediate results, while
+Lux~\cite{DBLP:journals/pvldb/LeeTABCKMSYHP21} surfaces intermediate insights
+directly in Jupyter notebooks. However, neither discusses how transformations
+relate to the final results in terms of metrics.
+
+\smallskip \noindent \emph{\underline{Demonstration.}} In our demonstration,
+participants will observe \clue's capability to decompose complex metrics into
+interpretable components, reveal how they are computed from underlying data, and
+support goal-driven exploration by simulating actionable changes across the
+metric hierarchy. We provide an overview of CLUE in Section 2 and a detailed
+walkthrough of our demonstration scenario in Section 3. 

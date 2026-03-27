@@ -1,0 +1,79 @@
+\begin{figure*}[h]
+\centering
+\small
+
+\begin{minipage}[t]{0.4\textwidth}
+\centering
+\resizebox{!}{0.23\textwidth}{
+\begin{tabular}{ll}
+\toprule
+\textbf{TID} & \textbf{Description} \\
+\midrule
+T20      &  \{SELECT * FROM Orders WHERE \metric{order\_date} > \metric{last\_month}\} Recent\_Orders \\
+T21      &  \{JOIN Order\_Items and Recent\_Orders on \metric{order\_id}\} Recent\_Order\_Items \\
+T22      &  \{JOIN Recent\_Products table and Products table on \metric{product\_id}\} Recent\_Products \\
+\hline
+T50      &  SELECT COUNT(*) AS \metric{\#\_orders} FROM Recent\_Products \\
+\hline
+T97      &  SELECT (\metric{revenue} - \metric{cost}) AS \metric{gross\_value} \\
+T98      &  SUM(\metric{gross\_value}) AS \metric{\#\_total\_gross\_value} \\
+T99      &  DIV(\#\_total\_gross\_value, \#\_orders) AS \metric{expected\_order\_value} \\
+T100     & Multiply prob\_active, expected\_orders, and expected\_order\_value \\
+\bottomrule
+\end{tabular}
+}
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.4\textwidth}
+\centering
+\raisebox{-15mm}{
+\resizebox{!}{0.3\textwidth}{
+\begin{tikzpicture}[
+  sibling distance=10em, 
+  level distance=3em,
+  metric/.style = {
+      shape=rectangle,
+      rounded corners,
+      draw=gray!50,              
+      align=center,
+      minimum width=2.0cm,
+      minimum height=0.3cm,
+      text=black,                  % text color
+      font=\footnotesize,
+  },
+  edge from parent/.style={
+      draw, -{Stealth[round]}, 
+      edge from parent path={(\tikzparentnode.south) -- ++(0,-0.2cm) -| (\tikzchildnode.north)}
+  }
+]
+\node[metric] {PLTV}
+child { node[metric] {Probability of Active} 
+    child { 
+      node {\footnotesize \text{$\vdots$}}
+        } 
+    } 
+  child { node[metric] {Expected Order Value}
+    child { node[metric] {Total Gross Order Value} 
+      child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } 
+        } 
+    child { node[metric] {\#\_Orders} 
+      child [edge from parent/.style={draw=none}, level distance=1.2em] 
+        { node {\footnotesize \text{$\vdots$}} } 
+        }
+    }
+    child { node[metric] {Expected \# of Orders}
+    child { 
+      node {\footnotesize \text{$\vdots$}}
+        } 
+    } ;
+\end{tikzpicture}
+}
+}
+\end{minipage}
+
+\caption{\textbf{Left:} Example transformations applied to PLTV dataset.
+\textbf{Right:} Example metric hierarchy showing how PLTV metric can be
+decomposed into sub-metrics.}
+\label{tab:metrics}
+\end{figure*}

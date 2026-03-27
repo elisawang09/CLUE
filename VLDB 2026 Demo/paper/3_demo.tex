@@ -1,0 +1,77 @@
+%!TEX root=paper.tex
+\section{Demonstration scenario}
+
+We will demonstrate CLUE with an open-source dbt project, Jaffle Shop
+~\cite{jaffleShop}, which contains six source tables: customers, orders, order
+items, products, supplies, and stores. The demonstration guides users through 11
+steps (as annotated in Figure 2). We impersonate Sheldon, introduced in Example
+1, who has recently joined Jaffle Shop as a data analyst. While exploring the
+company's operations dashboard, he notices that the PLTV metric is lower than
+expected. He wants to understand why this is happening and explore how the
+company could increase the metric by 20\% by the end of the year.
+
+We will demonstrate CLUE with an open-source dbt project, Jaffle Shop
+~\footnote{Jaffle Shop dataset: \url{https://github.com/dbt-labs/jaffle_shop}},
+which contains six source tables: customers, orders, order items, products,
+supplies, and stores. The demonstration guides users through 11 steps (as
+annotated in Figure 2). We impersonate Sheldon, introduced in Example 1, who has
+recently joined Jaffle Shop as a data analyst. While exploring the company's
+operations dashboard, he notices that the PLTV metric is lower than expected. He
+wants to understand why this is happening and explore how the company could
+increase the metric by 20\% by the end of the year.
+
+\textbf{Step \stepCounter{A}, \stepCounter{B}, \& \stepCounter{C} (Searching for
+a metric and viewing the description)} Sheldon first searches for the metric
+name in CLUE. The left panel displays a snapshot of the metric along with an
+AI-generated description explaining how the metric is derived.
+
+\textbf{Step \stepCounter{D} (Viewing metric provenance)} On the top right
+panel, CLUE presents the metric-centric lineage of the searched metric as a tree
+structure. Each child node represents a submetric of the parent node and is
+marked with either \texttt{\#} or \texttt{\%} so users can easily distinguish
+their types. Mathematical operations between sibling nodes are annotated with a
+yellow diamond on the connecting branches. For example, the root node and the
+nodes at level 1 represent the equation $\metric{PLTV} = \metric{Probability of
+Active} \times \metric{Expected Number of Orders} \times \metric{Expected Order
+Value}$. To avoid overwhelming users, only the first-level submetrics are
+displayed by default. Users can click a node to expand the next level.
+
+\textbf{Step \stepCounter{E} (Exploring data provenance)} To ensure the
+calculation is correct, Sheldon invites the metric owner to review the data
+provenance of the entire metric path. By right-clicking a leaf node and clicking
+``\textit{Open in Transformation View}'', CLUE extracts and visualizes the data
+flow and transformation steps as a DAG in the panel below. Unlike existing
+lineage tools, CLUE allows users to view in-line code context directly within
+the lineage graph by hovering over the symbol representing each operation. CLUE
+also supports exploring transformations across multiple paths by allowing users
+to switch between tabs.
+
+\textbf{Step \stepCounter{F}, \stepCounter{G}, \& \stepCounter{H} (Simulating
+metric causality through top-down reasoning)} After confirming that the metric
+is correctly defined, Sheldon wants to explore how to plan for the 20\% growth
+target in PLTV. She clicks ``\textit{Launch Metric Simulator}'' in
+\stepCounter{F} and sets the target growth to 20\% in \stepCounter{G}. CLUE then
+initializes sliders for each first-level metric. When the user adjusts any
+slider, the remaining sliders automatically adjust to maintain the target value.
+
+\textbf{Step \stepCounter{H}, \stepCounter{I} \&  \stepCounter{J} (Requesting
+suggestions)} The user clicks ``\textit{Recommend strategies}'' in
+\stepCounter{H}, and CLUE suggests several approaches to achieve the goal set in
+\stepCounter{G}. The data change summary of an option will show in
+\stepCounter{J} when the user selects it. 
+
+\textbf{Step \stepCounter{K} \& \stepCounter{J} (Simulating value changes of the
+selected recommendation and viewing the result)} 
+
+To answer the question ``\textit{How much would PLTV change if we obtained more
+orders from new visitors?}'', Sheldon selects the second suggestion and clicks
+``\textit{Start simulation'}' in \stepCounter{K}. CLUE then computes the updated
+values for each metric and displays the results in \stepCounter{K}. Changes are
+highlighted in green or red to indicate increases or decreases in metric values.
+
+\emph{\underline{Demonstration engagement.}} Our target users include
+non-technical decision makers and data professionals who need to understand how
+a complex metric is derived. After the guided demonstration, users can explore
+the causal relationships between a final metric and its component metrics
+through clear visualizations, and observe how changes in underlying data
+propagate to the metric value.

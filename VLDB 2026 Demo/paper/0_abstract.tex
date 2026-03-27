@@ -1,0 +1,19 @@
+%!TEX root=paper.tex
+
+Data visualization on dashboards is ubiquitous in many domains, such as business
+intelligence. Such dashboards often visualize the final metrics (e.g., revenue)
+that are derived from a series of data transformations, aggregations that also
+involve sub-metrics (e.g., sales, cost). However, users often struggle to
+understand these metrics for answering \texttt{how-to} questions. For example,
+users want to know how to achieve a target metric value by adjusting the data.
+This lack of transparency in dashboards hinders users' ability to make informed
+decisions since it is unclear how the metrics are computed and what factors
+contribute to their values. To address this lack of transparency, we present
+\clue, a system that provides users with the extraction and visualization of
+metric lineages and a metric simulator for answering \texttt{how-to} questions.
+The metric lineage extraction and visualization component allow users to
+understand the data and transformation processes that lead to the final metric
+values. The metric simulator enables users to explore the impact of adjusting
+final and sub-metric values, and provides data adjustment suggestions on how to
+achieve target metric values. We will demonstrate \clue using a real-world
+dataset and a dashboard with multiple metrics. 
