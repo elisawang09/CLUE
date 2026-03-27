@@ -31,4 +31,5 @@ paper.pdf
 *.synctex(busy)
 *.DS_Store
 *.xmpi
-*.command
+*.command\
+*.pyc
