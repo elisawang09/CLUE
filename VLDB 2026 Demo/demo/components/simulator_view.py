@@ -1,11 +1,8 @@
 import streamlit as st
-from .styles import inject_checkbox_styles, get_detail_box_html
+from .styles import get_detail_box_html
 
 
 def render_simulator_view() -> None:
-    # Inject custom styles
-    inject_checkbox_styles()
-    
     # Initialize session state for suggestions
     if "show_suggestions" not in st.session_state:
         st.session_state.show_suggestions = False
@@ -57,7 +54,9 @@ def render_simulator_view() -> None:
                         checked = st.checkbox(suggestion, key=f"suggestion_{idx}")
                         st.session_state.checked_suggestions[idx] = checked
                         
-                    if st.button("Start Simulation", key="start_simulation", use_container_width=True):
+                    if st.button("Start Simulation", key="start_simulation",                        
+                        # use_container_width=True, 
+                        type="primary", width=200,):
                         st.session_state.simulation_started = True
                     
                 # Right column: selected details

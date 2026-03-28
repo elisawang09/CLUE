@@ -4,6 +4,7 @@ Custom styling utilities for the simulator view.
 
 # Color definitions
 CHECKBOX_COLOR = "#2C3770"
+SUBHEADER_COLOR = "#2C3770"
 TEXT_SELECTED_COLOR = "#E0EAFF"
 TEXT_SELECTED_BG = "#2C377015"  # semi-transparent background
 BORDER_COLOR = "#94B6FF"
@@ -27,7 +28,7 @@ def _bullets_to_html_list(content: str) -> str:
     return f"<ul style=\"margin: 0; padding-left: 18px;\">{li_html}</ul>"
 
 def inject_checkbox_styles():
-    """Injects custom CSS for checkbox styling."""
+    """Injects app-wide CSS for checkbox and subheader styling."""
     import streamlit as st
     
     css = f"""
@@ -36,9 +37,19 @@ def inject_checkbox_styles():
         [data-testid="stCheckbox"] > label > div:first-child {{
             accent-color: {CHECKBOX_COLOR} !important;
         }}
+
+        /* Global subheader color (st.subheader renders as h3) */
+        [data-testid="stHeading"] h3 {{
+            color: {SUBHEADER_COLOR} !important;
+        }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
+
+
+def inject_app_styles():
+    """Alias for app-wide style injection."""
+    inject_checkbox_styles()
 
 def get_selected_text_style() -> str:
     """Returns styled text wrapper for selected items in Simulator Suggestions."""

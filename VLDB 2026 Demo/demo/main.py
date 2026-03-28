@@ -1,6 +1,7 @@
 import streamlit as st
 from components.main_view import render_main_view
 from components.simulator_view import render_simulator_view
+from components.styles import inject_app_styles
 
 st.set_page_config(layout="wide")
 
@@ -21,6 +22,8 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+inject_app_styles()
 
 if "active_view" not in st.session_state:
     st.session_state.active_view = "main"
