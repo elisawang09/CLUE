@@ -1,6 +1,6 @@
 import streamlit as st
 from .styles import get_detail_box_html
-
+from .top_view import render_top_view
 
 def render_simulator_view() -> None:
     # Initialize session state for suggestions
@@ -11,15 +11,9 @@ def render_simulator_view() -> None:
     if "simulation_started" not in st.session_state:
         st.session_state.simulation_started = False
 
-    top_left, top_right = st.columns([0.2, 0.1])
-    with top_left:
-        st.title("Metric Simulator")
-    with top_right:
-        if st.button("Back to CLUE", key="back_to_main", use_container_width=True):
-            st.session_state.active_view = "main"
-            st.rerun()
-
-    sim_col1, sim_col2 = st.columns([1.2, 2.8])
+    render_top_view(button_text="Back to Main View", view_type="main")
+    
+    sim_col1, sim_col2 = st.columns([1.0, 3])
     with sim_col1:
         with st.container(border=True, height=640):
             st.subheader("Simulator Controls")

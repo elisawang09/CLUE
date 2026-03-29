@@ -1,43 +1,10 @@
 import streamlit as st
-
+from .top_view import render_top_view
 
 def render_main_view() -> None:
     # Inline row
     with st.container():
-        col_title, col_serach, col_button = st.columns([0.1, 0.3, 0.1])
-
-        with col_title:
-            st.title("CLUE")
-
-        with col_serach:
-            metric_suggestions = [
-                "Page Views",
-                "Paying Users",
-                "Retention Rate",
-                "Total Revenue",
-                "Profit",
-                "Purchase Frequency",
-                "Product Sales",
-                "PLTV",
-            ]
-
-            st.selectbox(
-                "",
-                options=metric_suggestions,
-                index=None,
-                key="search_query",
-                placeholder="Search a metric (e.g., total revenue)",
-            )
-
-        with col_button:
-            if st.button(
-                "Launch Metric Simulator",
-                key="search_btn",
-                use_container_width=True,
-                type="primary",
-            ):
-                st.session_state.active_view = "simulator"
-                st.rerun()
+        render_top_view(button_text="Launch Metric Simulator", view_type="simulator")
 
     col1, col2 = st.columns([1.0, 3])
 
