@@ -1,5 +1,7 @@
 import streamlit as st
 from .top_view import render_top_view
+from .provenance_graph import render_provenance_graph
+from .transformation_graph import render_transformation_graph
 
 def _is_pltv_selected() -> bool:
     """Return whether the currently selected metric is PLTV."""
@@ -10,25 +12,25 @@ def _is_pltv_selected() -> bool:
 def _build_pltv_trend_values() -> list[dict[str, int | str]]:
     """Create demo PLTV trend points used by the overview line chart."""
     return [
-        {"date": "2025-11-23", "value": 21000},
-        {"date": "2025-11-24", "value": 22000},
-        {"date": "2025-11-25", "value": 27000},
-        {"date": "2025-11-25T12:00:00", "value": 25800},
-        {"date": "2025-11-26", "value": 29000},
-        {"date": "2025-11-27", "value": 32700},
-        {"date": "2025-11-27T08:00:00", "value": 32000},
-        {"date": "2025-11-28", "value": 37600},
-        {"date": "2025-11-28T10:00:00", "value": 34300},
-        {"date": "2025-11-28T18:00:00", "value": 40200},
-        {"date": "2025-11-29", "value": 38200},
-        {"date": "2025-11-29T10:00:00", "value": 47000},
+        {"date": "2025-04-30", "value": 21000},
+        {"date": "2025-05-31", "value": 22000},
+        {"date": "2025-06-30", "value": 27000},
+        {"date": "2025-07-31T12:00:00", "value": 25800},
+        {"date": "2025-08-31", "value": 29000},
+        {"date": "2025-09-30", "value": 32700},
+        {"date": "2025-10-31T08:00:00", "value": 32000},
+        {"date": "2025-11-30", "value": 37600},
+        {"date": "2025-12-31T10:00:00", "value": 34300},
+        {"date": "2026-01-31T18:00:00", "value": 40200},
+        {"date": "2026-02-28", "value": 38200},
+        {"date": "2026-03-31T10:00:00", "value": 47000},
     ]
 
 
 def _build_pltv_vega_spec() -> dict:
     """Build the Vega-Lite spec for a single PLTV trend line with highlighted last point."""
     return {
-        "height": 150,
+        "height": 200,
         "layer": [
             {
                 "mark": {"type": "line", "color": "#2F3E7C", "strokeWidth": 4},
@@ -36,7 +38,7 @@ def _build_pltv_vega_spec() -> dict:
                     "x": {
                         "field": "date",
                         "type": "temporal",
-                        "axis": {"title": None, "format": "%-d %b", "labelColor": "#7B7F87", "grid": False},
+                        "axis": {"title": None, "format": "%b %-y", "labelColor": "#7B7F87", "grid": False},
                     },
                     "y": {
                         "field": "value",
@@ -77,7 +79,7 @@ def _build_pltv_vega_spec() -> dict:
 
 def _render_metric_overview() -> None:
     """Render the main overview card with the PLTV trend chart."""
-    with st.container(border=True, height=250, key="card_main_overview"):
+    with st.container(border=True, height=350, key="card_main_overview"):
         st.subheader("Metric Overview")
         if not _is_pltv_selected():
             return
@@ -88,7 +90,7 @@ def _render_metric_overview() -> None:
 
 def _render_ai_explanation() -> None:
     """Render a concise bullet-style explanation for the selected metric."""
-    with st.container(border=True, height=350, key="card_main_explanation"):
+    with st.container(border=True, height=450, key="card_main_explanation"):
         st.subheader("AI-Generated Explanation")
         if not _is_pltv_selected():
             return
@@ -108,25 +110,63 @@ For example, if more customers remain active, place orders more often, or spend 
 
 def _render_provenance_view() -> None:
     """Render the provenance panel for the currently selected metric."""
-    with st.container(border=True, height=300, key="card_main_provenance"):
-        st.subheader("Provenance of Metric:")
+    active_node: str | None = st.session_state.get("selected_node")
+
+    with st.container(border=True, height=400, key="card_main_provenance"):
+        st.subheader("Provenance of Metric")
         if _is_pltv_selected():
-            st.subheader("PLTV")
-            st.write("Showing PLTV-specific lineage graphs.")
+            # st.subheader("PLTV")
+            st.write("Click a leaf metric highlight its computation path from source tables.")
+
+            # ---------------------------------------------------------------------------
+            # Legend
+            # ---------------------------------------------------------------------------
+            st.markdown("""
+            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;padding:7px 14px;
+                        background:#fff;border:1px solid #E2E8F0;border-radius:8px;
+                        font-size:0.8rem;color:#374151;align-items:center">
+            <span><span style="background:#F4A23A;color:#fff;border-radius:4px;
+                padding:1px 8px;font-weight:700">PLTV</span>&nbsp; Root</span>
+            <span><span style="background:#F5E6C8;border:1.5px solid #C9A84C;
+                border-radius:4px;padding:1px 8px;color:#8B6914">× ÷</span>&nbsp; Operator</span>
+            <span><span style="background:#E8F8EF;border:1.5px solid #3DAA6B;
+                border-radius:20px;padding:1px 10px;color:#1A6640">% Metric</span>&nbsp; Ratio</span>
+            <span><span style="background:#EEF0FF;border:1.5px solid #6B72D9;
+                border-radius:20px;padding:1px 10px;color:#2A2E8C"># Metric</span>&nbsp; Count/value</span>
+            <span><span style="display:inline-block;width:28px;height:3px;background:#2563EB;
+                vertical-align:middle;border-radius:2px"></span>&nbsp; Highlighted path</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ---------------------------------------------------------------------------
+            # Provenance Graph
+            # ---------------------------------------------------------------------------
+
+            clicked = render_provenance_graph(highlighted_node=active_node)
+
+            if clicked:
+                print(f"Clicked node id: {active_node}, state before toggle: {st.session_state.get('selected_node')}")
+
+                if st.session_state.get('selected_node') != clicked:
+                    st.session_state["selected_node"] = clicked
+                    _render_transformation_view()
 
 
 def _render_transformation_view() -> None:
     """Render the transformation panel for the currently selected metric."""
-    with st.container(border=True, height=300, key="card_main_transformation"):
+    active_node: str | None = st.session_state.get("selected_node")
+
+    with st.container(border=True, height=400, key="card_main_transformation"):
         st.subheader("Transformation View")
         if _is_pltv_selected():
-            st.write("Showing PLTV-specific data quality issues.")
+            st.write("Data pipeline showing how this metric is computed from raw source tables.")
+            render_transformation_graph(active_node)
 
 
 def render_main_view() -> None:
     """Render the main dashboard view with overview, explanation, and lineage panels."""
     with st.container():
-        render_top_view(button_text="Launch Metric Simulator", view_type="simulator")
+        render_top_view(button_text="🚀 Launch Metric Simulator", view_type="simulator")
 
     col1, col2 = st.columns([1.0, 3])
 
