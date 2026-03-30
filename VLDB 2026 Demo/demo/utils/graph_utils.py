@@ -17,15 +17,6 @@ from typing import Optional
 from data.graph_data import EDGES, NODES, NodeType
 
 # ---------------------------------------------------------------------------
-# Layout constants  (logical grid → pixels)
-# ---------------------------------------------------------------------------
-
-X_SCALE  = 260   # horizontal spacing between columns
-Y_SCALE  = 85   # vertical spacing between rows
-X_OFFSET = 10
-Y_OFFSET = 60
-
-# ---------------------------------------------------------------------------
 # Colour palette
 # ---------------------------------------------------------------------------
 
@@ -118,50 +109,54 @@ def _operator_svg_icon(symbol: str, highlighted: bool = False) -> str:
 
 def _node_style(node, highlighted: bool) -> dict:
     """Return a CSS-style dict for a StreamlitFlowNode."""
-    if highlighted:
-        base = {
-            "background":   COLORS["hl_bg"],
-            "border":       f"2.5px solid {COLORS['hl_border']}",
-            "color":        COLORS["hl_text"],
-            "boxShadow":    f"0 0 0 3px #BFDBFE",
-            "fontSize":     "14px",
-            "fontWeight":   "600",
-        }
-    elif node.node_type == NodeType.ROOT:
-        base = {
+
+    # Shared base styles for all node types
+    base = {
+            "cursor": "pointer",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "height": "50px"
+    }
+
+    if node.node_type == NodeType.ROOT:
+        base.update({
             "background": COLORS["root_bg"],
             "border":     f"2px solid {COLORS['root_border']}",
             "color":      COLORS["root_text"],
             "fontWeight": "700",
             "fontSize":   "15px",
-        }
+        })
     elif node.node_type == NodeType.OPERATOR:
-        base = {
+        base.update({
             "background": "transparent",
             "border":     "none",
             "color":      COLORS["op_text"],
-            "height":     "40px",
             "width":      "70px",
             "display":    "flex",
             "alignItems": "center",
             "justifyContent": "center",
-        }
+        })
     elif node.node_type == NodeType.RATIO:
-        base = {
+        base.update({
             "background":  COLORS["ratio_bg"],
             "border":      f"1.5px solid {COLORS['ratio_border']}",
             "color":       COLORS["ratio_text"],
             "fontSize":    "14px",
             "fontWeight":  "500",
-        }
+        })
     else:  # METRIC
-        base = {
+        base.update({
             "background":  COLORS["metric_bg"],
             "border":      f"1.5px solid {COLORS['metric_border']}",
             "color":       COLORS["metric_text"],
             "fontSize":    "14px",
             "fontWeight":  "500",
-        }
+        })
+
+    # Apply thicker border if highlighted (no background/size changes)
+    if highlighted and node.node_type != NodeType.OPERATOR:
+        base["border"] = f"3.5px solid {COLORS['hl_border']}"
 
     # Shared base styles for all node types
     if node.node_type != NodeType.OPERATOR and node.node_type != NodeType.ROOT:
@@ -170,19 +165,8 @@ def _node_style(node, highlighted: bool) -> dict:
             "padding":       "8px 16px",
             "cursor":        "pointer",
             "whiteSpace":    "nowrap",
-            "display":       "flex",
-            "alignItems":    "center",
-            "justifyContent": "center",
-            "height":        "40px",
             "minWidth":      "auto",
             "maxWidth":      "250px",
-        })
-    else:
-        base.update({
-            "cursor": "pointer",
-            "display": "flex",
-            "alignItems": "center",
-            "justifyContent": "center",
         })
 
     return base
@@ -219,6 +203,15 @@ def build_streamlit_flow_elements(
         Leaf node id whose root-to-leaf path should be highlighted.
     """
     from streamlit_flow.elements import StreamlitFlowEdge, StreamlitFlowNode
+
+    # ---------------------------------------------------------------------------
+    # Layout constants  (logical grid → pixels)
+    # ---------------------------------------------------------------------------
+
+    X_SCALE  = 260   # horizontal spacing between columns
+    Y_SCALE  = 85   # vertical spacing between rows
+    X_OFFSET = 10
+    Y_OFFSET = 60
 
     h_nodes: set[str] = set()
     h_edges: set[tuple[str, str]] = set()

@@ -113,10 +113,8 @@ def _render_provenance_view() -> None:
     active_node: str | None = st.session_state.get("selected_node")
 
     with st.container(border=True, height=400, key="card_main_provenance"):
-        st.subheader("Provenance of Metric")
+        st.subheader("Provenance of Metric", help="Click a leaf metric to highlight its computation path from source tables.")
         if _is_pltv_selected():
-            # st.subheader("PLTV")
-            st.write("Click a leaf metric highlight its computation path from source tables.")
 
             # ---------------------------------------------------------------------------
             # Legend
@@ -157,9 +155,8 @@ def _render_transformation_view() -> None:
     active_node: str | None = st.session_state.get("selected_node")
 
     with st.container(border=True, height=400, key="card_main_transformation"):
-        st.subheader("Transformation View")
+        st.subheader("Transformation View", help="Shows how the selected node is computed from raw source tables.")
         if _is_pltv_selected():
-            st.write("Data pipeline showing how this metric is computed from raw source tables.")
             render_transformation_graph(active_node)
 
 

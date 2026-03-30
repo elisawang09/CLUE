@@ -81,28 +81,3 @@ def render_provenance_graph(highlighted_node: Optional[str] = None) -> Optional[
             return clicked_id
         # Clicking the same leaf again deselects
     return None
-
-
-def render_leaf_selector() -> Optional[str]:
-    """
-    Sidebar selectbox as an explicit fallback / accessibility alternative.
-    Returns the selected leaf node id, or None.
-    """
-    st.sidebar.markdown("### 🔍 Highlight path to leaf")
-    leaf_nodes = sorted(
-        [NODE_MAP[lid] for lid in LEAF_IDS],
-        key=lambda n: n.label,
-    )
-    options = ["— none —"] + [n.id for n in leaf_nodes]
-    labels  = ["— none —"] + [
-        f"{'%' if NODE_MAP[lid].symbol == '%' else '#'}  {NODE_MAP[lid].label}"
-        for lid in options[1:]
-    ]
-    idx = st.sidebar.selectbox(
-        "Select a leaf metric",
-        range(len(options)),
-        format_func=lambda i: labels[i],
-        index=0,
-        key="leaf_selector",
-    )
-    return None if idx == 0 else options[idx]

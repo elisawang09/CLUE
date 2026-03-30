@@ -1,6 +1,7 @@
 import streamlit as st
 from .styles import get_detail_box_html
 from .top_view import render_top_view
+# from .simulation_graph import render_simulation_graph
 
 def _initialize_simulator_state() -> None:
     """Initialize session keys used by simulator controls and actions."""
@@ -26,15 +27,17 @@ def _get_suggestion_texts() -> list[str]:
 
 
 def _render_step_slider() -> None:
+    STEP_SIZE = 5
+
     """Render the compact PLTV step control with minus/input/plus actions."""
     def _decrement_pltv() -> None:
         """Decrease PLTV input by one step while enforcing lower bound."""
-        st.session_state.pltv = max(10, int(st.session_state.pltv) - 10)
+        st.session_state.pltv = max(10, int(st.session_state.pltv) - STEP_SIZE)
         st.session_state.pltv_input = int(st.session_state.pltv)
 
     def _increment_pltv() -> None:
         """Increase PLTV input by one step while enforcing upper bound."""
-        st.session_state.pltv = min(100, int(st.session_state.pltv) + 10)
+        st.session_state.pltv = min(100, int(st.session_state.pltv) + STEP_SIZE)
         st.session_state.pltv_input = int(st.session_state.pltv)
 
     def _sync_pltv_from_input() -> None:
@@ -53,7 +56,8 @@ def _render_step_slider() -> None:
         unsafe_allow_html=True,
     )
 
-    st.markdown("###### 🎯 Aiming the metric to be (%)")
+    st.markdown("<h6 style='text-align: center;'>🎯 Aiming the metric to be (%)</h6>", unsafe_allow_html=True)
+
     with st.container(key="pltv_step_row"):
         col1, col2, col3 = st.columns([1, 0.5, 1], gap="small", vertical_alignment="center")
         with col1:
@@ -72,7 +76,7 @@ def _render_step_slider() -> None:
                 "🎯 Aiming the metric to be (%)",
                 min_value=10,
                 max_value=100,
-                step=10,
+                step=STEP_SIZE,
                 key="pltv_input",
                 on_change=_sync_pltv_from_input,
                 label_visibility="collapsed"
@@ -95,13 +99,13 @@ def _render_goal_controls() -> None:
     with st.container(key="goal_controls_stack"):
         _render_step_slider()
 
-        st.markdown("###### Probability of Active")
+        st.markdown("<h6 style='text-align: center;'>Probability of Active</h6>", unsafe_allow_html=True)
         st.slider("Probability of Active", min_value=0.0, max_value=1.0, value=0.4, label_visibility="collapsed")
 
-        st.markdown("###### Expected Number of Orders")
+        st.markdown("<h6 style='text-align: center;'>Expected Number of Orders</h6>", unsafe_allow_html=True)
         st.slider("Expected Number of Orders", min_value=0, max_value=10, value=5, label_visibility="collapsed")
 
-        st.markdown("###### Expected Order Value ($)")
+        st.markdown("<h6 style='text-align: center;'>Expected Order Value ($)</h6>", unsafe_allow_html=True)
         st.slider("Expected Order Value ($)", min_value=1, max_value=100, value=50, label_visibility="collapsed")
 
         if st.button(
@@ -116,18 +120,20 @@ def _render_goal_controls() -> None:
 
 def _render_suggested_fixes_panel() -> None:
     """Render suggestions and selection details in the right-top panel."""
-    with st.container(border=True, height=310, key="card_sim_suggestions"):
+    with st.container(border=True, height=250, key="card_sim_suggestions"):
         st.subheader("Suggested Data Fixes")
         if not st.session_state.show_suggestions:
             return
 
         suggestions = _get_suggestion_texts()
-        suggestion_details = """- +200 new active customers
-- +400 new orders added
-- Avg order value increased from $50 → $60 (for new data)
-- Total gross value increased by $24K"""
+        suggestion_details = """
+        - +200 new active customers
+        - +400 new orders added
+        - Avg order value increased from $50 → $60 (for new data)
+        - Total gross value increased by $24K
+        """
 
-        left_col, right_col = st.columns([0.6, 0.4])
+        left_col, right_col = st.columns([0.6, 0.4], gap="small")
 
         with left_col:
             for idx, suggestion in enumerate(suggestions):
@@ -147,8 +153,8 @@ def _render_suggested_fixes_panel() -> None:
 
 def _render_simulation_output_panel() -> None:
     """Render simulation output summary for selected strategies."""
-    with st.container(border=True, height=310, key="card_sim_output"):
-        st.subheader("Simulation Output")
+    with st.container(border=True, height=385, key="card_sim_output"):
+        st.subheader("Simulation Results")
         if not st.session_state.simulation_started:
             st.write("Click Start Simulation to generate output here.")
             return
@@ -162,11 +168,12 @@ def _render_simulation_output_panel() -> None:
                 if st.session_state.checked_suggestions.get(idx, False)
             ]
 
-        st.write("Simulation started.")
+        # st.write("Simulation started.")
         if selected_suggestions:
             st.markdown("**Applied Suggestions**")
-            for suggestion in selected_suggestions:
-                st.markdown(f"- {suggestion}")
+            # for suggestion in selected_suggestions:
+            #     st.markdown(f"- {suggestion}")
+            #TODO: replace with actual simulation output via calling render_simulation_graph() instead of echoing suggestions
         else:
             st.write("No suggestions selected. Showing baseline simulation output.")
 
@@ -177,10 +184,10 @@ def render_simulator_view() -> None:
 
     render_top_view(button_text="Back to Main View", view_type="main")
 
-    sim_col1, sim_col2 = st.columns([1.0, 3])
+    sim_col1, sim_col2 = st.columns([1.0, 4])
 
     with sim_col1:
-        with st.container(border=True, height=640, key="card_sim_goal"):
+        with st.container(border=True, height=650, key="card_sim_goal"):
             st.subheader("Set A Goal")
             _render_goal_controls()
 
