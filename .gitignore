@@ -33,3 +33,5 @@ paper.pdf
 *.xmpi
 *.command\
 *.pyc
+.venv/
+__pycache__/
