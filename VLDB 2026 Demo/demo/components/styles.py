@@ -27,11 +27,10 @@ def _bullets_to_html_list(content: str) -> str:
     li_html = "".join(f"<li>{item}</li>" for item in items)
     return f"<ul style=\"margin: 0; padding-left: 18px;\">{li_html}</ul>"
 
-def inject_checkbox_styles():
-    """Injects app-wide CSS for checkbox and subheader styling."""
-    import streamlit as st
-    
-    css = f"""
+
+def _build_app_css() -> str:
+    """Build all app-level CSS customizations as a single style block."""
+    return f"""
     <style>
         :root {{
             --secondary-background-color: #FFFFFF;
@@ -198,7 +197,8 @@ def inject_checkbox_styles():
 
         .st-key-card_main_explanation [data-testid="stMarkdownContainer"] p,
         .st-key-card_main_explanation [data-testid="stMarkdownContainer"] li {{
-            font-size: 0.9rem !important; # Slightly smaller font for explanation text the AI-generated explanation card
+            /* Slightly smaller font for explanation text in AI-generated explanation card */
+            font-size: 0.9rem !important;
             line-height: 1.45 !important;
         }}
 
@@ -219,7 +219,13 @@ def inject_checkbox_styles():
         }}
     </style>
     """
-    st.markdown(css, unsafe_allow_html=True)
+
+
+def inject_checkbox_styles() -> None:
+    """Inject app-wide CSS for cards, controls, typography, and interactive widgets."""
+    import streamlit as st
+
+    st.markdown(_build_app_css(), unsafe_allow_html=True)
 
 
 def inject_app_styles():
