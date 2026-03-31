@@ -96,6 +96,7 @@ def build_streamlit_flow_elements(
             style={
                 "stroke":      COLORS["edge_hl"] if (edge.source, edge.target) in h_edges else COLORS["edge_normal"],
                 "strokeWidth": 2.5               if (edge.source, edge.target) in h_edges else 1.5,
+                "cursor":      "none"
             },
             marker_end={
                 "type":  "arrowclosed",
@@ -159,7 +160,6 @@ def build_simulation_flow_elements(
             animated=False,
             style={"stroke": COLORS["edge_normal"], "strokeWidth": 1.5},
             marker_start={"type": "arrowclosed", "color": COLORS["edge_normal"]},
-            # marker_end={"type": "arrowclosed", "color": COLORS["edge_normal"]},
         )
         for i, edge in enumerate(EDGES)
     ]
@@ -216,10 +216,12 @@ def build_transformation_flow_elements(
             edge_type="smoothstep",
             style={"stroke": "#94A3B8",
                     "strokeWidth": 1.5,
-                    "fontSize": "13px",
-                    "cursor": "default"},
+                    "cursor": "none"},
             marker_end={"type": "arrowclosed", "color": "#94A3B8"},
+            label_style={'fontSize': '14px', 'fill': 'blue', 'padding': '4px'},
             label=edge.label or None,
+            label_show_bg=True,
+            label_bg_style={'stroke': 'orange', 'fill': '#FFFFFF'}
         )
         for i, edge in enumerate(trans_edges)
     ]

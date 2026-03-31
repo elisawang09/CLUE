@@ -189,18 +189,3 @@ def inject_tooltip_overlay() -> None:
     the MutationObserver planted on window.parent survives all reruns.
     """
     components.html(_BOOTSTRAP_HTML, height=0, scrolling=False)
-
-
-# def node_tooltip_wrapper(inner_html: str, description: str) -> str:
-#     """
-#     Wrap inner_html with a data-flow-tooltip attribute carrier.
-#     The JS listener walks up from any hovered element to find it.
-#     """
-#     safe = description.replace('"', '&quot;')
-#     return (
-#         f'<span data-flow-tooltip="{safe}" '
-#         f'style="display:inline-flex;align-items:center;'
-#         f'justify-content:center;width:100%;height:100%;">'
-#         f'{inner_html}'
-#         f'</span>'
-#     )

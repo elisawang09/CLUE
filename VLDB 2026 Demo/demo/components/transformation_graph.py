@@ -54,7 +54,7 @@ def render_transformation_graph(leaf_node_id: str):
         fit_view=True,
         show_controls=False,
         show_minimap=False,
-        allow_zoom=False,
+        allow_zoom=True,
         get_node_on_click=False,
         pan_on_drag=True
     )

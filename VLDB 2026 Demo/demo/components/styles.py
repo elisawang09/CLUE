@@ -43,6 +43,11 @@ def _build_app_css() -> str:
             background: #F4F7FD !important;
         }}
 
+        [data-testid="stMainBlockContainer"] {{
+            padding-top: 10px !important;
+            padding-bottom: 80px !important;
+        }}
+
         /* Keep bordered containers as white cards */
         [data-testid="stVerticalBlockBorderWrapper"],
         [data-testid="stVerticalBlockBorderWrapper"] > div,
@@ -240,8 +245,8 @@ def get_detail_box_html(content: str) -> str:
     """Returns HTML for the details box with styling."""
     list_html = _bullets_to_html_list(content)
     return f"""
-    <div style="border: 2px solid {BORDER_COLOR}; 
-                padding: 12px; 
+    <div style="border: 2px solid {BORDER_COLOR};
+                padding: 12px;
                 border-radius: 5px;
                 background-color: rgba(45, 55, 112, 0.03);
                 font-size: 14px;

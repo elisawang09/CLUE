@@ -14,18 +14,18 @@ def _is_pltv_selected() -> bool:
 def _build_pltv_trend_values() -> list[dict[str, int | str]]:
     """Create demo PLTV trend points used by the overview line chart."""
     return [
-        {"date": "2025-04-30", "value": 21000},
-        {"date": "2025-05-31", "value": 22000},
-        {"date": "2025-06-30", "value": 27000},
-        {"date": "2025-07-31T12:00:00", "value": 25800},
-        {"date": "2025-08-31", "value": 29000},
-        {"date": "2025-09-30", "value": 32700},
-        {"date": "2025-10-31T08:00:00", "value": 32000},
-        {"date": "2025-11-30", "value": 37600},
-        {"date": "2025-12-31T10:00:00", "value": 34300},
-        {"date": "2026-01-31T18:00:00", "value": 40200},
-        {"date": "2026-02-28", "value": 38200},
-        {"date": "2026-03-31T10:00:00", "value": 47000},
+        {"date": "2025-04-30", "value": 44.7},
+        {"date": "2025-05-31", "value": 46.8},
+        {"date": "2025-06-30", "value": 57.4},
+        {"date": "2025-07-31T12:00:00", "value": 54.9},
+        {"date": "2025-08-31", "value": 61.7},
+        {"date": "2025-09-30", "value": 69.6},
+        {"date": "2025-10-31T08:00:00", "value": 68.1},
+        {"date": "2025-11-30", "value": 80.0},
+        {"date": "2025-12-31T10:00:00", "value": 73.0},
+        {"date": "2026-01-31T18:00:00", "value": 85.5},
+        {"date": "2026-02-28", "value": 81.3},
+        {"date": "2026-03-31T10:00:00", "value": 100.0}
     ]
 
 
@@ -45,7 +45,7 @@ def _build_pltv_vega_spec() -> dict:
                     "y": {
                         "field": "value",
                         "type": "quantitative",
-                        "scale": {"domain": [20000, 50000]},
+                        "scale": {"domain": [40, 120]},
                         "axis": {
                             "title": None,
                             "format": "$,.0f",

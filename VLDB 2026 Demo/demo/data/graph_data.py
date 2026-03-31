@@ -84,7 +84,7 @@ class SimulationDelta:
     node_id : str
         Matches a Node.id from NODES.
     new_value : str
-        Formatted new/delta value shown in bold (e.g. "$24", "0.2", "400").
+        Formatted delta value shown in bold (e.g. "$24", "0.2", "400").
     prev_value : str
         Formatted previous value shown in parentheses (e.g. "$100", "0.4").
     direction : DeltaDirection
@@ -93,10 +93,11 @@ class SimulationDelta:
         Short label preceding prev_value, either "Prev:" or "Curr:".
     """
     node_id: str
-    new_value: str
+    delta_value: str
     prev_value: str
     direction: DeltaDirection
     label_prefix: str = "Prev:"
+    description: Optional[str] = None   # Optional detailed description for tooltip
 
 
 # ---------------------------------------------------------------------------
@@ -117,64 +118,73 @@ class SimulationDelta:
 SIMULATION_DELTAS: dict[str, SimulationDelta] = {
     "pltv": SimulationDelta(
         node_id="pltv",
-        new_value="$24",
+        delta_value="$24",
         prev_value="$100",
         direction=DeltaDirection.UP,
+        description="100 → 124 (= 0.6 * 4 * $51.67)"
     ),
     "prob_active": SimulationDelta(
         node_id="prob_active",
-        new_value="0.2",
+        delta_value="0.2",
         prev_value="0.4",
         direction=DeltaDirection.UP,
+        description="Increased from 0.4 to 0.6 because of the addition of 200 active customers."
     ),
     "exp_orders": SimulationDelta(
         node_id="exp_orders",
-        new_value="1",
+        delta_value="1",
         prev_value="5",
         direction=DeltaDirection.DOWN,
+        description="Decreased from 5 (2000 orders / 400 active customers) to 4 (2400 orders /600 active customers). "
     ),
     "exp_order_value": SimulationDelta(
         node_id="exp_order_value",
-        new_value="$1.67",
+        delta_value="$1.67",
         prev_value="$50",
         direction=DeltaDirection.UP,
+        description="Increased from $50 to $51.67 because of the increase in total gross order value to $124K and total orders to 2400."
     ),
     "active_customers_1": SimulationDelta(
         node_id="active_customers_1",
-        new_value="200",
+        delta_value="200",
         prev_value="400",
         direction=DeltaDirection.UP,
+        description="400 → 600"
     ),
     "acquired_customers": SimulationDelta(
         node_id="acquired_customers",
-        new_value="",
+        delta_value="",
         prev_value="1000",
         direction=DeltaDirection.FLAT,
         label_prefix="Curr:",
     ),
     "total_orders": SimulationDelta(
         node_id="total_orders",
-        new_value="400",
+        delta_value="400",
         prev_value="2000",
         direction=DeltaDirection.UP,
+        description="2000 → 2400"
     ),
     "active_customers_2": SimulationDelta(
         node_id="active_customers_2",
-        new_value="200",
+        delta_value="200",
         prev_value="400",
         direction=DeltaDirection.UP,
+        description="400 → 600"
     ),
     "total_gross_order_value": SimulationDelta(
         node_id="total_gross_order_value",
-        new_value="$24K",
+        delta_value="$24K",
         prev_value="$100K",
         direction=DeltaDirection.UP,
+        description="$100K → $124K"
     ),
     "total_orders_2": SimulationDelta(
         node_id="total_orders_2",
-        new_value="400",
+        delta_value="400",
         prev_value="2000",
         direction=DeltaDirection.UP,
+        description="2000 → 2400"
     ),
 }
 
@@ -263,7 +273,7 @@ NODES: list[Node] = [
         label="Total Gross Order Value",
         node_type=NodeType.METRIC,
         symbol="#",
-        description="Sum of gross value across all orders.",
+        description="Sum of gross value across all orders in the period.",
         x=4, y=3.5,
     ),
     Node(
@@ -271,7 +281,7 @@ NODES: list[Node] = [
         label="Total Orders",
         node_type=NodeType.METRIC,
         symbol="#",
-        description="Total number of orders placed.",
+        description="Total number of orders placed in the period.",
         x=4, y=4.5,
     ),
 ]
@@ -336,14 +346,14 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="recent_odr",
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: Recent orders only",
+                description="Filter: Orders in the last 3 months",
                 x=1, y=0
             ),
             TransformationNode(
                 id="active_customers",
                 label="Active Customers",
                 node_type=TransformationNodeType.OUTPUT,
-                description="Count of unique customers",
+                description="Count of unique customers who placed orders in the last 3 months",
                 icon="output.png",
                 x=2, y=0
             ),
@@ -369,7 +379,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="new_customers",
                 label="New Customers",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: acquisition_date in period",
+                description="Filter: acquisition_date in the last 3 months",
                 icon="filter_table.png",
                 x=1, y=0
             ),
@@ -377,7 +387,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="acquired_count",
                 label="Acquired Customers",
                 node_type=TransformationNodeType.OUTPUT,
-                description="Count of acquired customers",
+                description="Count of acquired customers in the last 3 months",
                 icon="output.png",
                 x=2, y=0
             ),
@@ -403,7 +413,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="recent_odr_2",
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: Recent orders",
+                description="Filter: Recent orders placed in the last 3 months",
                 icon="filter_table.png",
                 x=1, y=0
             ),
@@ -411,7 +421,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="total_orders_output",
                 label="Total Orders",
                 node_type=TransformationNodeType.OUTPUT,
-                description="Count of orders",
+                description="Count of orders placed in the last 3 months",
                 icon="output.png",
                 x=2, y=0
             ),
@@ -437,7 +447,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="recent_odr_3",
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: Recent orders",
+                description="Filter: Orders in the last 3 months",
                 icon="filter_table.png",
                 x=1, y=0
             ),
@@ -445,7 +455,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="active_cust_output",
                 label="Active Customers",
                 node_type=TransformationNodeType.OUTPUT,
-                description="Count of distinct customers",
+                description="Count of distinct customers who placed orders in the last 3 months",
                 icon="output.png",
                 x=2, y=0
             ),
@@ -471,7 +481,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="raw_order_items_3",
                 label="raw_order_items",
                 node_type=TransformationNodeType.SOURCE_TABLE,
-                description="Order line items",
+                description="Source table containing all order line items",
                 icon="source_table.png",
                 x=0, y=1
             ),
@@ -479,7 +489,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="raw_products",
                 label="raw_products",
                 node_type=TransformationNodeType.SOURCE_TABLE,
-                description="Product master data",
+                description="Source table containing product details like price and cost",
                 icon="source_table.png",
                 x=0, y=2
             ),
@@ -487,7 +497,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="recent_odr_4",
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: Recent orders",
+                description="Filter: Recent orders placed in the last 3 months",
                 icon="filter_table.png",
                 x=1, y=0
             ),
@@ -495,7 +505,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="recent_odr_items_2",
                 label="recent_odr_items",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: Recent order items",
+                description="Filter: Recent order items placed in the last 3 months",
                 icon="filter_table.png",
                 x=1, y=1
             ),
@@ -503,7 +513,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="odr_item_prod",
                 label="odr_item_products",
                 node_type=TransformationNodeType.JOIN,
-                description="Join with products",
+                description="FROM recent_odr_items JOIN raw_products ON recent_odr_items.product_id = raw_products.product_id \n Enrich order items with product price and cost",
                 icon="join.png",
                 x=2, y=2
             ),
@@ -511,7 +521,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="gross_value",
                 label="gross_value",
                 node_type=TransformationNodeType.NEW_COLUMN,
-                description="SELECT (revenue - cost) AS gross_value",
+                description="SELECT (revenue - cost) AS gross_value \n Calculated for each order item.",
                 icon="new_column.png",
                 x=3, y=2
             ),
@@ -519,7 +529,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="total_gross_output",
                 label="Total Gross Order Value",
                 node_type=TransformationNodeType.AGGREGATION,
-                description="SUM(gross_value)",
+                description="SUM(gross_value) GROUP BY order_id \n Calculated total gross value for each order in the last 3 months.",
                 icon="output.png",
                 x=4, y=2
             ),
@@ -550,7 +560,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 id="recent_odr_5",
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
-                description="Filter: Recent orders",
+                description="Filter: Recent orders placed in the last 3 months",
                 icon="filter_table.png",
                 x=1, y=0
             ),

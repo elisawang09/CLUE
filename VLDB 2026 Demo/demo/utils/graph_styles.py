@@ -45,6 +45,10 @@ COLORS: dict[str, str] = {
     # Edges
     "edge_normal":  "#CBD5E1",
     "edge_hl":      "#2563EB",
+    # Edge label
+    "edge_label_text":  "#0000FF",
+    "edge_label_bg":    "#FFFFFF",
+    "edge_label_border": "#FFA500",
     # Simulation delta
     "delta_up":     "#16A34A",  # green
     "delta_down":   "#DC2626",  # red
@@ -105,6 +109,7 @@ def node_style(node, highlighted: bool) -> dict:
         "alignItems":      "center",
         "justifyContent":  "center",
         "height":          "50px",
+        "fontSize":   "16px"
     }
 
     if node.node_type == NodeType.ROOT:
@@ -113,7 +118,7 @@ def node_style(node, highlighted: bool) -> dict:
             "border":     f"3px solid {COLORS['root_border']}",
             "color":      COLORS["root_text"],
             "fontWeight": "700",
-            "fontSize":   "16px",
+            "fontSize":   "20px",
         })
     elif node.node_type == NodeType.OPERATOR:
         base.update({
@@ -124,13 +129,13 @@ def node_style(node, highlighted: bool) -> dict:
             "display":        "flex",
             "alignItems":     "center",
             "justifyContent": "center",
+            "fontSize":   "20px",
         })
     elif node.node_type == NodeType.RATIO:
         base.update({
             "background": COLORS["ratio_bg"],
             "border":     f"1.5px solid {COLORS['ratio_border']}",
             "color":      COLORS["ratio_text"],
-            "fontSize":   "14px",
             "fontWeight": "500",
         })
     else:  # METRIC
@@ -138,7 +143,6 @@ def node_style(node, highlighted: bool) -> dict:
             "background": COLORS["metric_bg"],
             "border":     f"1.5px solid {COLORS['metric_border']}",
             "color":      COLORS["metric_text"],
-            "fontSize":   "14px",
             "fontWeight": "500",
         })
 
@@ -167,7 +171,7 @@ def node_style_sim(node) -> dict:
     CSS flex layout.
     """
     style = node_style(node, highlighted=False)
-    style['height'] = '60px'
+    style['height'] = '65px'
     return style
 
 
@@ -218,29 +222,30 @@ def _delta_html(delta: SimulationDelta) -> str:
         value_html = ""
     else:
         value_html = (
-            f'<span style="color:{color}; font-weight:700; font-size:12px;">'
-            f'{arrow}&nbsp;{delta.new_value}'
+            f'<span style="color:{color}; font-weight:700; font-size:14px;">'
+            f'{arrow}&nbsp;{delta.delta_value}'
             f'</span>&nbsp;'
         )
 
     prev_html = (
-        f'<span style="color:{COLORS["delta_flat"]}; font-size:11px;">'
+        f'<span style="color:{COLORS["delta_flat"]}; font-size:12px;">'
         f'({delta.label_prefix}&nbsp;{delta.prev_value})'
         f'</span>'
     )
 
     if delta.direction == DeltaDirection.FLAT:
         badge = (
-            f'<span style="color:{color}; font-weight:700; font-size:12px;">{arrow}</span>'
+            f'<span style="color:{color}; font-weight:700; font-size:14px;">{arrow}</span>'
             f'&nbsp;{prev_html}'
         )
     else:
         badge = f'{value_html}{prev_html}'
 
+    tip = f'data-flow-tooltip="{delta.description.replace(chr(34), "&quot;")}"' if delta.description else ''
     return (
-        f'<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">'
+        f'<div style="display:flex; flex-direction:column; align-items:center; gap:2px;" {tip}>'
         f'<span style="white-space:nowrap; margin:0;">{{label_placeholder}}</span>'
-        f'<span style="white-space:nowrap; font-size:12px; text-align:center; margin:0;">{badge}</span>'
+        f'<span style="white-space:nowrap; text-align:center; margin:0;">{badge}</span>'
         f'</div>'
     )
 
@@ -297,7 +302,7 @@ def transformation_node_style(node) -> dict:
         "color":          colors["text"],
         "borderRadius":   "8px",
         "padding":        "2px",
-        "fontSize":       "15px",
+        "fontSize":       "16px",
         "fontWeight":     "500",
         "cursor":         "default",
         "display":        "flex",
@@ -343,19 +348,25 @@ def transformation_legend_style_html() -> str:
         ("filter_table", "Row Removal"),
         ("new_column", "New Column"),
         ("join", "Join"),
-        ("aggregation", "Aggregations"),
         ("output", "Output Metric"),
     ]
 
     legend_items = []
     for node_type, label in transform_types:
-        colors = TRANSFORMATION_COLORS[node_type]
         icon_path = f"{STATIC_URL}/{node_type}.png"
         legend_items.append(
             f'<span style="display:flex;align-items:center;gap:6px;">'
             f'<img src="{icon_path}" width={ICON_SIZE} height={ICON_SIZE} style="flex-shrink:0;"/>'
             f'{label}</span>'
         )
+
+    # Add edge label styling
+    legend_items.append(
+        f'<span style="display:flex;align-items:center;gap:8px;">'
+        f'<span style="background:{COLORS["edge_label_bg"]};border:1.5px solid {COLORS["edge_label_border"]};'
+        f'border-radius:4px;padding:3px 8px;color:{COLORS["edge_label_text"]};">'
+        f'Operation</span>Operation</span>'
+    )
 
     return f"""
             <div style="display:flex;gap:15px;flex-wrap:wrap;margin-top:8px;padding:7px 14px;

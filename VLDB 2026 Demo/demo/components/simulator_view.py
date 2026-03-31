@@ -122,7 +122,7 @@ def _render_goal_controls() -> None:
 
 def _render_suggested_fixes_panel() -> None:
     """Render suggestions and selection details in the right-top panel."""
-    with st.container(border=True, height=250, key="card_sim_suggestions"):
+    with st.container(border=True, height=285, key="card_sim_suggestions"):
         st.subheader("Suggested Data Fixes")
         if not st.session_state.show_suggestions:
             return
@@ -155,7 +155,7 @@ def _render_suggested_fixes_panel() -> None:
 
 def _render_simulation_output_panel() -> None:
     """Render simulation output summary for selected strategies."""
-    with st.container(border=True, height=385, key="card_sim_output"):
+    with st.container(border=True, height=400, key="card_sim_output"):
         st.subheader("Simulation Results")
         if not st.session_state.simulation_started:
             st.write("Click Start Simulation to generate output here.")
@@ -177,6 +177,7 @@ def _render_simulation_output_panel() -> None:
             st.markdown(legend_style_html(), unsafe_allow_html=True)
 
             render_simulation_graph()
+
         else:
             st.write("No suggestions selected. Showing baseline simulation output.")
 
@@ -184,14 +185,14 @@ def _render_simulation_output_panel() -> None:
 def render_simulator_view() -> None:
     """Render the simulator page with goal setup, suggestions, and output panels."""
     _initialize_simulator_state()
-
-    render_top_view(button_text="Back to Main View", view_type="main")
     inject_tooltip_overlay()
 
-    sim_col1, sim_col2 = st.columns([1.0, 4])
+    render_top_view(button_text="Back to Main View", view_type="main")
+
+    sim_col1, sim_col2 = st.columns([1.0, 3.5])
 
     with sim_col1:
-        with st.container(border=True, height=650, key="card_sim_goal"):
+        with st.container(border=True, height=700, key="card_sim_goal"):
             st.subheader("Set A Goal")
             _render_goal_controls()
 
