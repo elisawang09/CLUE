@@ -3,6 +3,7 @@ from .styles import get_detail_box_html
 from .top_view import render_top_view
 from .simulation_result_graph import render_simulation_graph
 from utils.graph_styles import legend_style_html
+from utils.tooltip_overlay import inject_tooltip_overlay
 
 def _initialize_simulator_state() -> None:
     """Initialize session keys used by simulator controls and actions."""
@@ -185,6 +186,7 @@ def render_simulator_view() -> None:
     _initialize_simulator_state()
 
     render_top_view(button_text="Back to Main View", view_type="main")
+    inject_tooltip_overlay()
 
     sim_col1, sim_col2 = st.columns([1.0, 4])
 

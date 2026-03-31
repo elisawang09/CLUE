@@ -3,6 +3,7 @@ from .top_view import render_top_view
 from .provenance_graph import render_provenance_graph
 from .transformation_graph import render_transformation_graph
 from utils.graph_styles import legend_style_html, transformation_legend_style_html
+from utils.tooltip_overlay import inject_tooltip_overlay
 
 def _is_pltv_selected() -> bool:
     """Return whether the currently selected metric is PLTV."""
@@ -153,6 +154,8 @@ def _render_transformation_view() -> None:
 
 def render_main_view() -> None:
     """Render the main dashboard view with overview, explanation, and lineage panels."""
+    inject_tooltip_overlay()
+
     with st.container():
         render_top_view(button_text="🚀 Launch Metric Simulator", view_type="simulator")
 

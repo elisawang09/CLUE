@@ -11,6 +11,7 @@ pass into StreamlitFlowNode/Edge constructors.
 
 from __future__ import annotations
 
+from platform import node
 from typing import Optional
 from data.graph_data import NodeType
 from data.graph_data import DeltaDirection, NodeType, SimulationDelta
@@ -180,12 +181,16 @@ def node_label(node, highlighted: bool = False) -> str:
         return operator_svg_icon(node.symbol or "", highlighted)
 
     if node.node_type == NodeType.METRIC and node.symbol == "#":
-        return f"&#35;&nbsp;&nbsp;{node.label}"
+        raw = f"&#35;&nbsp;&nbsp;{node.label}"
+    elif node.symbol:
+        raw = f"{node.symbol}  {node.label}"
+    else:
+        raw = node.label
 
-    if node.symbol:
-        return f"{node.symbol}  {node.label}"
-
-    return node.label
+    if node.description:
+        tip = node.description.replace('"', '&quot;')
+        return f'<span data-flow-tooltip="{tip}">{raw}</span>'
+    return raw
 
 
 def _delta_html(delta: SimulationDelta) -> str:
@@ -268,7 +273,9 @@ def node_label_sim(
 def transformation_node_html(node, static_url: str) -> str:
     """Build the inner HTML string for a transformation flow node."""
     ICON_SIZE = 50
-    html = "<div style='display:flex; flex-direction:column; align-items:center; gap:2px; font-size:15px;'>"
+
+    tip = f'data-flow-tooltip="{node.description.replace(chr(34), "&quot;")}"' if node.description else ''
+    html = f'<div class="node_label" style="display:flex; flex-direction:column; align-items:center; gap:2px; font-size:15px;" {tip}>'
     if node.icon:
         html += (
             f'<img src="{static_url}/{node.icon}" width={ICON_SIZE} height={ICON_SIZE} '
@@ -277,6 +284,7 @@ def transformation_node_html(node, static_url: str) -> str:
     else:
         html += "<span style='font-size:15px;'>📊</span>"
     html += f"<span style='margin:0;'>{node.label}</span></div>"
+
     return html
 
 

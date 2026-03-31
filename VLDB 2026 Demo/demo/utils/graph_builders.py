@@ -198,7 +198,7 @@ def build_transformation_flow_elements(
         StreamlitFlowNode(
             id=node.id,
             pos=(TX_OFFSET + node.x * TX_SCALE, TY_OFFSET + node.y * TY_SCALE),
-            data={"content": transformation_node_html(node, STATIC_URL)},
+            data={"label": transformation_node_html(node, STATIC_URL)},
             node_type="default",
             source_position="right",
             target_position="left",
