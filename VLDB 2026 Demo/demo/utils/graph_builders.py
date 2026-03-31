@@ -19,17 +19,17 @@ from data.graph_data import (
     EDGES,
     LEAF_IDS,
     NODES,
-    # SIMULATION_DELTAS,
+    SIMULATION_DELTAS,
     TRANSFORMATION_FLOWS,
-    # SimulationDelta,
+    SimulationDelta,
 )
 from utils.graph_utils import ancestors_of, path_edges
 from utils.graph_styles import (
     COLORS,
     node_label,
-    # node_label_sim,
+    node_label_sim,
     node_style,
-    # node_style_sim,
+    node_style_sim,
     operator_svg_icon,
     transformation_node_html,
     transformation_node_style,
@@ -107,68 +107,63 @@ def build_streamlit_flow_elements(
 
     return sf_nodes, sf_edges
 
+# ---------------------------------------------------------------------------
+# Simulation result graph builder
+# ---------------------------------------------------------------------------
 
-# # ---------------------------------------------------------------------------
-# # Simulation result graph builder
-# # ---------------------------------------------------------------------------
+def build_simulation_flow_elements(
+    deltas: Optional[dict[str, SimulationDelta]] = None,
+) -> tuple[list, list]:
+    """
+    Build (nodes, edges) for the simulation result graph.
 
-# def build_simulation_flow_elements(
-#     deltas: Optional[dict[str, SimulationDelta]] = None,
-# ) -> tuple[list, list]:
-#     """
-#     Build (nodes, edges) for the simulation result graph.
+    Every provenance node is included; nodes with a matching SimulationDelta
+    get a delta badge appended to their label.
 
-#     Every provenance node is included; nodes with a matching SimulationDelta
-#     get a delta badge appended to their label.
+    Parameters
+    ----------
+    deltas :
+        Mapping of node_id → SimulationDelta.  Defaults to
+        SIMULATION_DELTAS from graph_data when None.
+    """
+    from streamlit_flow.elements import StreamlitFlowEdge, StreamlitFlowNode
 
-#     Parameters
-#     ----------
-#     deltas :
-#         Mapping of node_id → SimulationDelta.  Defaults to
-#         SIMULATION_DELTAS from graph_data when None.
-#     """
-#     from streamlit_flow.elements import StreamlitFlowEdge, StreamlitFlowNode
+    effective_deltas = SIMULATION_DELTAS if deltas is None else deltas
 
-#     effective_deltas = SIMULATION_DELTAS if deltas is None else deltas
+    X_SCALE, Y_SCALE   = 270, 100
+    X_OFFSET, Y_OFFSET = 10,  70
 
-#     X_SCALE, Y_SCALE   = 270, 100
-#     X_OFFSET, Y_OFFSET = 10,  70
+    sf_nodes = [
+        StreamlitFlowNode(
+            id=node.id,
+            pos=(X_OFFSET + node.x * X_SCALE, Y_OFFSET + node.y * Y_SCALE),
+            data={"label": node_label_sim(
+                node,
+                delta=effective_deltas.get(node.id)
+            )},
+            node_type="default",
+            source_position="right",
+            target_position="left",
+            draggable=False,
+            style=node_style_sim(node),
+        )
+        for node in NODES
+    ]
 
-#     sf_nodes = [
-#         StreamlitFlowNode(
-#             id=node.id,
-#             pos=(X_OFFSET + node.x * X_SCALE, Y_OFFSET + node.y * Y_SCALE),
-#             data={"label": node_label_sim(
-#                 node,
-#                 delta=effective_deltas.get(node.id),
-#                 is_leaf=_is_leaf(node.id),
-#             )},
-#             node_type="default",
-#             source_position="right",
-#             target_position="left",
-#             draggable=False,
-#             style=node_style_sim(
-#                 node,
-#                 has_delta=(node.id in effective_deltas),
-#             ),
-#         )
-#         for node in NODES
-#     ]
+    sf_edges = [
+        StreamlitFlowEdge(
+            id=f"se{i}",
+            source=edge.source,
+            target=edge.target,
+            edge_type="smoothstep",
+            animated=False,
+            style={"stroke": COLORS["edge_normal"], "strokeWidth": 1.5},
+            marker_end={"type": "arrowclosed", "color": COLORS["edge_normal"]},
+        )
+        for i, edge in enumerate(EDGES)
+    ]
 
-#     sf_edges = [
-#         StreamlitFlowEdge(
-#             id=f"se{i}",
-#             source=edge.source,
-#             target=edge.target,
-#             edge_type="smoothstep",
-#             animated=False,
-#             style={"stroke": COLORS["edge_normal"], "strokeWidth": 1.5},
-#             marker_end={"type": "arrowclosed", "color": COLORS["edge_normal"]},
-#         )
-#         for i, edge in enumerate(EDGES)
-#     ]
-
-#     return sf_nodes, sf_edges
+    return sf_nodes, sf_edges
 
 
 # ---------------------------------------------------------------------------

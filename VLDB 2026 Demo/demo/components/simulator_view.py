@@ -1,7 +1,7 @@
 import streamlit as st
 from .styles import get_detail_box_html
 from .top_view import render_top_view
-# from .simulation_graph import render_simulation_graph
+from .simulation_result_graph import render_simulation_graph
 
 def _initialize_simulator_state() -> None:
     """Initialize session keys used by simulator controls and actions."""
@@ -168,12 +168,8 @@ def _render_simulation_output_panel() -> None:
                 if st.session_state.checked_suggestions.get(idx, False)
             ]
 
-        # st.write("Simulation started.")
         if selected_suggestions:
-            st.markdown("**Applied Suggestions**")
-            # for suggestion in selected_suggestions:
-            #     st.markdown(f"- {suggestion}")
-            #TODO: replace with actual simulation output via calling render_simulation_graph() instead of echoing suggestions
+            render_simulation_graph()
         else:
             st.write("No suggestions selected. Showing baseline simulation output.")
 

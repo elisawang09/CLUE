@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Optional
 from data.graph_data import NodeType
-# from data.graph_data import DeltaDirection, NodeType, SimulationDelta
+from data.graph_data import DeltaDirection, NodeType, SimulationDelta
 
 
 # ---------------------------------------------------------------------------
@@ -22,9 +22,9 @@ from data.graph_data import NodeType
 
 COLORS: dict[str, str] = {
     # Root (PLTV orange box)
-    "root_bg":      "#F4A23A",
-    "root_border":  "#C97A10",
-    "root_text":    "#FFFFFF",
+    "root_bg":      "#FCE4C6",
+    "root_border":  "#F4A23A",
+    "root_text":    "#C97A10",
     # Operator diamond
     "op_bg":        "#F5E6C8",
     "op_border":    "#C9A84C",
@@ -109,10 +109,10 @@ def node_style(node, highlighted: bool) -> dict:
     if node.node_type == NodeType.ROOT:
         base.update({
             "background": COLORS["root_bg"],
-            "border":     f"2px solid {COLORS['root_border']}",
+            "border":     f"3px solid {COLORS['root_border']}",
             "color":      COLORS["root_text"],
             "fontWeight": "700",
-            "fontSize":   "15px",
+            "fontSize":   "16px",
         })
     elif node.node_type == NodeType.OPERATOR:
         base.update({
@@ -157,22 +157,16 @@ def node_style(node, highlighted: bool) -> dict:
     return base
 
 
-def node_style_sim(node, has_delta: bool) -> dict:
+def node_style_sim(node) -> dict:
     """
     Return a CSS-style dict for a simulation graph node.
 
-    Extends node_style() with taller height when a delta badge is present
-    to accommodate the two-line label layout.
+    For simulation nodes, we keep the same lean size as provenance nodes.
+    Delta information is positioned outside the node shape via the label's
+    CSS flex layout.
     """
     style = node_style(node, highlighted=False)
-
-    if has_delta and node.node_type != NodeType.OPERATOR:
-        style["height"]        = "auto"
-        style["minHeight"]     = "54px"
-        style["alignItems"]    = "flex-start"
-        style["paddingTop"]    = "6px"
-        style["paddingBottom"] = "6px"
-
+    style['height'] = '60px'
     return style
 
 
@@ -194,81 +188,77 @@ def node_label(node, highlighted: bool = False) -> str:
     return node.label
 
 
-# def _delta_html(delta: SimulationDelta, is_leaf: bool) -> str:
-#     """
-#     Build an HTML wrapper showing the simulation delta badge for a node.
+def _delta_html(delta: SimulationDelta) -> str:
+    """
+    Build an HTML wrapper showing the simulation delta badge for a node.
 
-#     The returned string contains a ``{label_placeholder}`` token that the
-#     caller replaces with the actual node label text.
+    The returned string contains a ``{label_placeholder}`` token that the
+    caller replaces with the actual node label text.
 
-#     Parameters
-#     ----------
-#     delta :
-#         The delta data for this node.
-#     is_leaf :
-#         Leaf nodes use left-aligned layout; non-leaf nodes are centered.
-#     """
-#     dir_map = {
-#         DeltaDirection.UP:   ("↑", COLORS["delta_up"]),
-#         DeltaDirection.DOWN: ("↓", COLORS["delta_down"]),
-#         DeltaDirection.FLAT: ("—", COLORS["delta_flat"]),
-#     }
-#     arrow, color = dir_map[delta.direction]
+    For leaf nodes: delta is positioned to the right, left-aligned.
+    For non-leaf nodes: delta is positioned below, center-aligned.
 
-#     if delta.direction == DeltaDirection.FLAT:
-#         value_html = ""
-#     else:
-#         value_html = (
-#             f'<span style="color:{color}; font-weight:700; font-size:12px;">'
-#             f'{arrow}&nbsp;{delta.new_value}'
-#             f'</span>&nbsp;'
-#         )
+    Parameters
+    ----------
+    delta : The delta data for this node.
+    """
+    dir_map = {
+        DeltaDirection.UP:   ("↑", COLORS["delta_up"]),
+        DeltaDirection.DOWN: ("↓", COLORS["delta_down"]),
+        DeltaDirection.FLAT: ("—", COLORS["delta_flat"]),
+    }
+    arrow, color = dir_map[delta.direction]
 
-#     prev_html = (
-#         f'<span style="color:{COLORS["delta_flat"]}; font-size:11px;">'
-#         f'({delta.label_prefix}&nbsp;{delta.prev_value})'
-#         f'</span>'
-#     )
+    if delta.direction == DeltaDirection.FLAT:
+        value_html = ""
+    else:
+        value_html = (
+            f'<span style="color:{color}; font-weight:700; font-size:12px;">'
+            f'{arrow}&nbsp;{delta.new_value}'
+            f'</span>&nbsp;'
+        )
 
-#     if delta.direction == DeltaDirection.FLAT:
-#         badge = (
-#             f'<span style="color:{color}; font-weight:700; font-size:12px;">{arrow}</span>'
-#             f'&nbsp;{prev_html}'
-#         )
-#     else:
-#         badge = f'{value_html}{prev_html}'
+    prev_html = (
+        f'<span style="color:{COLORS["delta_flat"]}; font-size:11px;">'
+        f'({delta.label_prefix}&nbsp;{delta.prev_value})'
+        f'</span>'
+    )
 
-#     align = "flex-start" if is_leaf else "center"
-#     text_align = "" if is_leaf else "text-align:center;"
+    if delta.direction == DeltaDirection.FLAT:
+        badge = (
+            f'<span style="color:{color}; font-weight:700; font-size:12px;">{arrow}</span>'
+            f'&nbsp;{prev_html}'
+        )
+    else:
+        badge = f'{value_html}{prev_html}'
 
-#     return (
-#         f'<div style="display:flex; flex-direction:column; align-items:{align}; gap:1px; {text_align}">'
-#         f'<span style="white-space:nowrap;">{{label_placeholder}}</span>'
-#         f'<span style="white-space:nowrap; margin-top:2px;">{badge}</span>'
-#         f'</div>'
-#     )
+    return (
+        f'<div style="display:flex; flex-direction:column; align-items:center; gap:2px;">'
+        f'<span style="white-space:nowrap; margin:0;">{{label_placeholder}}</span>'
+        f'<span style="white-space:nowrap; font-size:12px; text-align:center; margin:0;">{badge}</span>'
+        f'</div>'
+    )
 
 
-# def node_label_sim(
-#     node,
-#     delta: Optional[SimulationDelta],
-#     is_leaf: bool,
-# ) -> str:
-#     """
-#     Build the display label for a simulation graph node.
+def node_label_sim(
+    node,
+    delta: Optional[SimulationDelta]
+) -> str:
+    """
+    Build the display label for a simulation graph node.
 
-#     Wraps the standard provenance label with a delta badge when a
-#     SimulationDelta is provided.
-#     """
-#     if node.node_type == NodeType.OPERATOR:
-#         return operator_svg_icon(node.symbol or "", highlighted=False)
+    Wraps the standard provenance label with a delta badge when a
+    SimulationDelta is provided.
+    """
+    if node.node_type == NodeType.OPERATOR:
+        return operator_svg_icon(node.symbol or "", highlighted=False)
 
-#     base = node_label(node, highlighted=False)
+    base = node_label(node, highlighted=False)
 
-#     if delta is None:
-#         return base
+    if delta is None:
+        return base
 
-#     return _delta_html(delta, is_leaf).replace("{label_placeholder}", base)
+    return _delta_html(delta).replace("{label_placeholder}", base)
 
 
 # ---------------------------------------------------------------------------

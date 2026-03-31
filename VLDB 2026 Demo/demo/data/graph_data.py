@@ -2,10 +2,10 @@
 graph_data.py
 -------------
 Static graph definition for the PLTV metric provenance graph.
-Defines node types, symbols, and edges that describe how PLTV is computed.
+Defines node types, symbols, edges, and simulation delta data.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 from enum import Enum
 
@@ -62,6 +62,121 @@ class TransformationEdge:
     target: str
     label: Optional[str] = None             # SQL operation or transformation label
     icon: Optional[str] = None              # Optional icon filename to display on edge
+
+
+# ---------------------------------------------------------------------------
+# Simulation delta data
+# ---------------------------------------------------------------------------
+
+class DeltaDirection(str, Enum):
+    UP = "up"       # Green arrow up
+    DOWN = "down"   # Red arrow down
+    FLAT = "flat"   # Grey dash (no change)
+
+
+@dataclass
+class SimulationDelta:
+    """
+    Captures the simulated change for a single node.
+
+    Attributes
+    ----------
+    node_id : str
+        Matches a Node.id from NODES.
+    new_value : str
+        Formatted new/delta value shown in bold (e.g. "$24", "0.2", "400").
+    prev_value : str
+        Formatted previous value shown in parentheses (e.g. "$100", "0.4").
+    direction : DeltaDirection
+        Visual indicator: UP (green ↑), DOWN (red ↓), or FLAT (grey —).
+    label_prefix : str
+        Short label preceding prev_value, either "Prev:" or "Curr:".
+    """
+    node_id: str
+    new_value: str
+    prev_value: str
+    direction: DeltaDirection
+    label_prefix: str = "Prev:"
+
+
+# ---------------------------------------------------------------------------
+# Simulation deltas — parsed from the simulator wireframe screenshot
+# ---------------------------------------------------------------------------
+#
+#  PLTV                      ↑ $24    (Prev: $100)
+#  Probability of Active     ↑ 0.2    (Prev: 0.4)
+#  Expected # of Orders      ↓ 1      (Prev: 5)
+#  Expected Order Value      ↑ $1.67  (Prev: $50)
+#  Active Customers [1]      ↑ 200    (Prev: 400)
+#  Acquired Customers        —        (Curr: 1000)
+#  Total Orders [1]          ↑ 400    (Prev: 2000)
+#  Active Customers [2]      ↑ 200    (Prev: 400)
+#  Total Gross Order Value   ↑ $24K   (Prev: $100K)
+#  Total Orders [2]          ↑ 400    (Prev: 2000)
+
+SIMULATION_DELTAS: dict[str, SimulationDelta] = {
+    "pltv": SimulationDelta(
+        node_id="pltv",
+        new_value="$24",
+        prev_value="$100",
+        direction=DeltaDirection.UP,
+    ),
+    "prob_active": SimulationDelta(
+        node_id="prob_active",
+        new_value="0.2",
+        prev_value="0.4",
+        direction=DeltaDirection.UP,
+    ),
+    "exp_orders": SimulationDelta(
+        node_id="exp_orders",
+        new_value="1",
+        prev_value="5",
+        direction=DeltaDirection.DOWN,
+    ),
+    "exp_order_value": SimulationDelta(
+        node_id="exp_order_value",
+        new_value="$1.67",
+        prev_value="$50",
+        direction=DeltaDirection.UP,
+    ),
+    "active_customers_1": SimulationDelta(
+        node_id="active_customers_1",
+        new_value="200",
+        prev_value="400",
+        direction=DeltaDirection.UP,
+    ),
+    "acquired_customers": SimulationDelta(
+        node_id="acquired_customers",
+        new_value="",
+        prev_value="1000",
+        direction=DeltaDirection.FLAT,
+        label_prefix="Curr:",
+    ),
+    "total_orders": SimulationDelta(
+        node_id="total_orders",
+        new_value="400",
+        prev_value="2000",
+        direction=DeltaDirection.UP,
+    ),
+    "active_customers_2": SimulationDelta(
+        node_id="active_customers_2",
+        new_value="200",
+        prev_value="400",
+        direction=DeltaDirection.UP,
+    ),
+    "total_gross_order_value": SimulationDelta(
+        node_id="total_gross_order_value",
+        new_value="$24K",
+        prev_value="$100K",
+        direction=DeltaDirection.UP,
+    ),
+    "total_orders_2": SimulationDelta(
+        node_id="total_orders_2",
+        new_value="400",
+        prev_value="2000",
+        direction=DeltaDirection.UP,
+    ),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +319,6 @@ LEAF_IDS: set[str] = {
 # ---------------------------------------------------------------------------
 # Transformation flow data for each leaf metric
 # ---------------------------------------------------------------------------
-# Each leaf node can show a detailed transformation flow showing how that
-# metric is computed from raw tables.
 
 TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[TransformationEdge]]] = {
     # "active_customers_1": Active Customers (from prob_active path)
