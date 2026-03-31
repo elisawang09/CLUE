@@ -2,6 +2,7 @@ import streamlit as st
 from .top_view import render_top_view
 from .provenance_graph import render_provenance_graph
 from .transformation_graph import render_transformation_graph
+from utils.graph_styles import legend_style_html, transformation_legend_style_html
 
 def _is_pltv_selected() -> bool:
     """Return whether the currently selected metric is PLTV."""
@@ -119,22 +120,7 @@ def _render_provenance_view() -> None:
             # ---------------------------------------------------------------------------
             # Legend
             # ---------------------------------------------------------------------------
-            st.markdown("""
-            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;padding:7px 14px;
-                        background:#fff;border:1px solid #E2E8F0;border-radius:8px;
-                        font-size:0.8rem;color:#374151;align-items:center">
-            <span><span style="background:#F4A23A;color:#fff;border-radius:4px;
-                padding:1px 8px;font-weight:700">PLTV</span>&nbsp; Root</span>
-            <span><span style="background:#F5E6C8;border:1.5px solid #C9A84C;
-                border-radius:4px;padding:1px 8px;color:#8B6914">× ÷</span>&nbsp; Operator</span>
-            <span><span style="background:#E8F8EF;border:1.5px solid #3DAA6B;
-                border-radius:20px;padding:1px 10px;color:#1A6640">% Metric</span>&nbsp; Ratio</span>
-            <span><span style="background:#EEF0FF;border:1.5px solid #6B72D9;
-                border-radius:20px;padding:1px 10px;color:#2A2E8C"># Metric</span>&nbsp; Count/value</span>
-            <span><span style="display:inline-block;width:28px;height:3px;background:#2563EB;
-                vertical-align:middle;border-radius:2px"></span>&nbsp; Highlighted path</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(legend_style_html(), unsafe_allow_html=True)
 
             # ---------------------------------------------------------------------------
             # Provenance Graph
@@ -157,6 +143,11 @@ def _render_transformation_view() -> None:
     with st.container(border=True, height=400, key="card_main_transformation"):
         st.subheader("Transformation View", help="Shows how the selected node is computed from raw source tables.")
         if _is_pltv_selected():
+            # ---------------------------------------------------------------------------
+            # Legend
+            # ---------------------------------------------------------------------------
+            st.markdown(transformation_legend_style_html(), unsafe_allow_html=True)
+
             render_transformation_graph(active_node)
 
 

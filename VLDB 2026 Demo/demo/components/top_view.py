@@ -15,12 +15,10 @@ def render_top_view(button_text: str, view_type: str) -> None:
             metric_suggestions = [
                 "Page Views",
                 "Paying Users",
+                "PLTV",
                 "Retention Rate",
                 "Total Revenue",
-                "Profit",
-                "Purchase Frequency",
-                "Product Sales",
-                "PLTV",
+                "Profit"
             ]
 
             st.selectbox(

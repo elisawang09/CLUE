@@ -2,6 +2,7 @@ import streamlit as st
 from .styles import get_detail_box_html
 from .top_view import render_top_view
 from .simulation_result_graph import render_simulation_graph
+from utils.graph_styles import legend_style_html
 
 def _initialize_simulator_state() -> None:
     """Initialize session keys used by simulator controls and actions."""
@@ -169,6 +170,11 @@ def _render_simulation_output_panel() -> None:
             ]
 
         if selected_suggestions:
+            # ---------------------------------------------------------------------------
+            # Legend
+            # ---------------------------------------------------------------------------
+            st.markdown(legend_style_html(), unsafe_allow_html=True)
+
             render_simulation_graph()
         else:
             st.write("No suggestions selected. Showing baseline simulation output.")

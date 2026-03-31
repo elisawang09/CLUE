@@ -36,7 +36,7 @@ class Edge:
 
 class TransformationNodeType(str, Enum):
     SOURCE_TABLE = "source_table"    # Source data tables (with icon)
-    FILTER = "filter"               # Filter/transformation operations
+    FILTER = "filter_table"          # Filter/transformation operations
     JOIN = "join"                   # Join operations
     AGGREGATION = "aggregation"     # SUM, COUNT, AVG, etc.
     NEW_COLUMN = "new_column"       # Derived/computed columns
@@ -362,7 +362,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="raw_customers",
                 node_type=TransformationNodeType.SOURCE_TABLE,
                 description="Source table containing all customers",
-                icon="table.png",
+                icon="source_table.png",
                 x=0, y=0
             ),
             TransformationNode(
@@ -370,6 +370,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="New Customers",
                 node_type=TransformationNodeType.FILTER,
                 description="Filter: acquisition_date in period",
+                icon="filter_table.png",
                 x=1, y=0
             ),
             TransformationNode(
@@ -377,7 +378,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="Acquired Customers",
                 node_type=TransformationNodeType.OUTPUT,
                 description="Count of acquired customers",
-                icon="table.png",
+                icon="output.png",
                 x=2, y=0
             ),
         ],
@@ -395,45 +396,29 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="raw_orders",
                 node_type=TransformationNodeType.SOURCE_TABLE,
                 description="Source table containing all orders",
-                icon="table.png",
+                icon="source_table.png",
                 x=0, y=0
-            ),
-            TransformationNode(
-                id="raw_order_items_2",
-                label="raw_order_items",
-                node_type=TransformationNodeType.SOURCE_TABLE,
-                description="Order line items",
-                icon="table.png",
-                x=0, y=1
             ),
             TransformationNode(
                 id="recent_odr_2",
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
                 description="Filter: Recent orders",
+                icon="filter_table.png",
                 x=1, y=0
-            ),
-            TransformationNode(
-                id="recent_odr_items",
-                label="recent_odr_items",
-                node_type=TransformationNodeType.JOIN,
-                description="Join with order items",
-                x=1.5, y=0.5
             ),
             TransformationNode(
                 id="total_orders_output",
                 label="Total Orders",
                 node_type=TransformationNodeType.OUTPUT,
                 description="Count of orders",
-                icon="table.png",
-                x=2.5, y=0.25
+                icon="output.png",
+                x=2, y=0
             ),
         ],
         [
             TransformationEdge("raw_orders_2", "recent_odr_2", "Filter applied"),
-            TransformationEdge("raw_order_items_2", "recent_odr_items", "Join"),
-            TransformationEdge("recent_odr_2", "recent_odr_items", "Join (J)"),
-            TransformationEdge("recent_odr_items", "total_orders_output", "COUNT(*)"),
+            TransformationEdge("recent_odr_2", "total_orders_output", "COUNT(*)")
         ]
     ),
 
@@ -445,7 +430,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="raw_orders",
                 node_type=TransformationNodeType.SOURCE_TABLE,
                 description="Source table containing all orders",
-                icon="table.png",
+                icon="source_table.png",
                 x=0, y=0
             ),
             TransformationNode(
@@ -453,6 +438,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
                 description="Filter: Recent orders",
+                icon="filter_table.png",
                 x=1, y=0
             ),
             TransformationNode(
@@ -460,7 +446,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="Active Customers",
                 node_type=TransformationNodeType.OUTPUT,
                 description="Count of distinct customers",
-                icon="table.png",
+                icon="output.png",
                 x=2, y=0
             ),
         ],
@@ -502,6 +488,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="recent_odr",
                 node_type=TransformationNodeType.FILTER,
                 description="Filter: Recent orders",
+                icon="filter_table.png",
                 x=1, y=0
             ),
             TransformationNode(
@@ -509,6 +496,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="recent_odr_items",
                 node_type=TransformationNodeType.FILTER,
                 description="Filter: Recent order items",
+                icon="filter_table.png",
                 x=1, y=1
             ),
             TransformationNode(
@@ -516,6 +504,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="odr_item_products",
                 node_type=TransformationNodeType.JOIN,
                 description="Join with products",
+                icon="join.png",
                 x=2, y=2
             ),
             TransformationNode(
@@ -523,6 +512,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="gross_value",
                 node_type=TransformationNodeType.NEW_COLUMN,
                 description="SELECT (revenue - cost) AS gross_value",
+                icon="new_column.png",
                 x=3, y=2
             ),
             TransformationNode(
@@ -530,6 +520,7 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 label="Total Gross Order Value",
                 node_type=TransformationNodeType.AGGREGATION,
                 description="SUM(gross_value)",
+                icon="output.png",
                 x=4, y=2
             ),
         ],
@@ -556,15 +547,24 @@ TRANSFORMATION_FLOWS: dict[str, tuple[list[TransformationNode], list[Transformat
                 x=0, y=0
             ),
             TransformationNode(
+                id="recent_odr_5",
+                label="recent_odr",
+                node_type=TransformationNodeType.FILTER,
+                description="Filter: Recent orders",
+                icon="filter_table.png",
+                x=1, y=0
+            ),
+            TransformationNode(
                 id="total_orders_5",
                 label="Total Orders",
                 node_type=TransformationNodeType.AGGREGATION,
                 description="COUNT(*) of orders",
-                x=1, y=0
+                x=2, y=0
             ),
         ],
         [
-            TransformationEdge("raw_orders_5", "total_orders_5", "COUNT(*)"),
+            TransformationEdge("raw_orders_5", "recent_odr_5", "Filter applied"),
+            TransformationEdge("recent_odr_5", "total_orders_5", "COUNT(*)")
         ]
     ),
 }

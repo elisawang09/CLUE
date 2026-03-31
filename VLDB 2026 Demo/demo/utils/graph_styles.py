@@ -52,12 +52,12 @@ COLORS: dict[str, str] = {
 
 # Transformation node colors keyed by TransformationNodeType.value
 TRANSFORMATION_COLORS: dict[str, dict[str, str]] = {
-    "source_table": {"bg": "#F0F7FF", "border": "#0284C7", "text": "#0C4A6E"},
-    "filter":       {"bg": "#FEF3C7", "border": "#D97706", "text": "#92400E"},
-    "join":         {"bg": "#E0E7FF", "border": "#6366F1", "text": "#312E81"},
-    "aggregation":  {"bg": "#DCF5E3", "border": "#059669", "text": "#064E3B"},
-    "new_column":   {"bg": "#FCE7F3", "border": "#EC4899", "text": "#831843"},
-    "output":       {"bg": "#F3E8FF", "border": "#A855F7", "text": "#581C87"},
+    "source_table": {"bg": "#F0F7FF", "border": "#0284C7", "text": "#2F2F2F"},
+    "filter_table":   {"bg": "#FEF3C7", "border": "#D97706", "text": "#256AFF"},
+    "new_column":   {"bg": "#FCE7F3", "border": "#EC4899", "text": "#256AFF"},
+    "join":         {"bg": "#E0E7FF", "border": "#6366F1", "text": "#4E9D26"},
+    "aggregation":  {"bg": "#DCF5E3", "border": "#059669", "text": "#900B09"},
+    "output":       {"bg": "#F3E8FF", "border": "#A855F7", "text": "#392C05"},
 }
 
 
@@ -71,7 +71,7 @@ def operator_svg_icon(symbol: str, highlighted: bool = False) -> str:
     bg_color     = "#DBEAFE" if highlighted else COLORS["op_bg"]
     border_color = "#2563EB" if highlighted else COLORS["op_border"]
 
-    size      = 70
+    size      = 40
     half      = size / 2
     rect_size = 28
     rect_half = rect_size / 2
@@ -119,7 +119,7 @@ def node_style(node, highlighted: bool) -> dict:
             "background":     "transparent",
             "border":         "none",
             "color":          COLORS["op_text"],
-            "width":          "70px",
+            "padding":          "2px",
             "display":        "flex",
             "alignItems":     "center",
             "justifyContent": "center",
@@ -267,15 +267,16 @@ def node_label_sim(
 
 def transformation_node_html(node, static_url: str) -> str:
     """Build the inner HTML string for a transformation flow node."""
-    html = "<div style='display:flex; align-items:center; gap:8px; font-size:13px;'>"
+    ICON_SIZE = 50
+    html = "<div style='display:flex; flex-direction:column; align-items:center; gap:2px; font-size:15px;'>"
     if node.icon:
         html += (
-            f'<img src="{static_url}/{node.icon}" width="18" height="18" '
-            f'style="flex-shrink:0"/>'
+            f'<img src="{static_url}/{node.icon}" width={ICON_SIZE} height={ICON_SIZE} '
+            f'style="flex-shrink:0; margin:0;"/>'
         )
     else:
-        html += "<span style='font-size:14px;'>📊</span>"
-    html += f"<span>{node.label}</span></div>"
+        html += "<span style='font-size:15px;'>📊</span>"
+    html += f"<span style='margin:0;'>{node.label}</span></div>"
     return html
 
 
@@ -283,12 +284,12 @@ def transformation_node_style(node) -> dict:
     """Return a CSS-style dict for a transformation flow node."""
     colors = TRANSFORMATION_COLORS.get(node.node_type.value, TRANSFORMATION_COLORS["source_table"])
     return {
-        "background":     colors["bg"],
-        "border":         f"2px solid {colors['border']}",
+        "background":     "transparent",
+        "border":         "none",
         "color":          colors["text"],
         "borderRadius":   "8px",
-        "padding":        "10px 12px",
-        "fontSize":       "13px",
+        "padding":        "2px",
+        "fontSize":       "15px",
         "fontWeight":     "500",
         "cursor":         "default",
         "display":        "flex",
@@ -298,3 +299,60 @@ def transformation_node_style(node) -> dict:
         "maxWidth":       "200px",
         "minWidth":       "130px",
     }
+
+# ---------------------------------------------------------------------------
+# Legend style
+# ---------------------------------------------------------------------------
+
+def legend_style_html() -> str:
+    """Inject CSS to hide the StreamlitFlow minimap and controls."""
+
+    return f"""
+            <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;padding:7px 14px;
+                        background:#fff;border:1px solid #E2E8F0;border-radius:8px;
+                        font-size:0.8rem;color:#374151;align-items:center">
+            <span><span style="background:{COLORS['root_bg']}; border:3px solid {COLORS['root_border']};border-radius:4px;
+                padding:1px 8px; color:{COLORS['root_text']}; font-weight:700">PLTV</span>&nbsp; Root</span>
+            <span><span style="background:{COLORS['op_bg']};border:1.5px solid {COLORS['op_border']};
+                border-radius:4px;padding:1px 8px;color:{COLORS['op_text']}">&times; &div;</span>&nbsp; Operator</span>
+            <span><span style="background:{COLORS['ratio_bg']};border:1.5px solid {COLORS['ratio_border']};
+                border-radius:20px;padding:1px 10px;color:{COLORS['ratio_text']}">% Metric</span>&nbsp; Ratio</span>
+            <span><span style="background:{COLORS['metric_bg']};border:1.5px solid {COLORS['metric_border']};
+                border-radius:20px;padding:1px 10px;color:{COLORS['metric_text']}"># Metric</span>&nbsp; Count/value</span>
+            <span><span style="display:inline-block;width:28px;height:3px;background:{COLORS['edge_hl']};
+                vertical-align:middle;border-radius:2px"></span>&nbsp; Highlighted path</span>
+            </div>
+            """
+
+
+def transformation_legend_style_html() -> str:
+    """Build the legend for transformation flow nodes."""
+    ICON_SIZE = 24
+    STATIC_URL = "http://localhost:8502/app/static"
+
+    transform_types = [
+        ("source_table", "Source Table"),
+        ("filter_table", "Row Removal"),
+        ("new_column", "New Column"),
+        ("join", "Join"),
+        ("aggregation", "Aggregations"),
+        ("output", "Output Metric"),
+    ]
+
+    legend_items = []
+    for node_type, label in transform_types:
+        colors = TRANSFORMATION_COLORS[node_type]
+        icon_path = f"{STATIC_URL}/{node_type}.png"
+        legend_items.append(
+            f'<span style="display:flex;align-items:center;gap:6px;">'
+            f'<img src="{icon_path}" width={ICON_SIZE} height={ICON_SIZE} style="flex-shrink:0;"/>'
+            f'{label}</span>'
+        )
+
+    return f"""
+            <div style="display:flex;gap:15px;flex-wrap:wrap;margin-top:8px;padding:7px 14px;
+                        background:#fff;border:1px solid #E2E8F0;border-radius:8px;
+                        font-size:0.85rem;color:#374151;align-items:center">
+            {' '.join(legend_items)}
+            </div>
+            """

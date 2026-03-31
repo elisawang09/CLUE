@@ -158,7 +158,8 @@ def build_simulation_flow_elements(
             edge_type="smoothstep",
             animated=False,
             style={"stroke": COLORS["edge_normal"], "strokeWidth": 1.5},
-            marker_end={"type": "arrowclosed", "color": COLORS["edge_normal"]},
+            marker_start={"type": "arrowclosed", "color": COLORS["edge_normal"]},
+            # marker_end={"type": "arrowclosed", "color": COLORS["edge_normal"]},
         )
         for i, edge in enumerate(EDGES)
     ]
@@ -190,7 +191,7 @@ def build_transformation_flow_elements(
     trans_nodes, trans_edges = TRANSFORMATION_FLOWS[leaf_node_id]
 
     STATIC_URL = "http://localhost:8502/app/static"
-    TX_SCALE, TY_SCALE   = 280, 100
+    TX_SCALE, TY_SCALE   = 280, 140
     TX_OFFSET, TY_OFFSET = 20,  40
 
     sf_nodes = [
@@ -213,7 +214,10 @@ def build_transformation_flow_elements(
             source=edge.source,
             target=edge.target,
             edge_type="smoothstep",
-            style={"stroke": "#94A3B8", "strokeWidth": 1.5},
+            style={"stroke": "#94A3B8",
+                    "strokeWidth": 1.5,
+                    "fontSize": "13px",
+                    "cursor": "default"},
             marker_end={"type": "arrowclosed", "color": "#94A3B8"},
             label=edge.label or None,
         )
