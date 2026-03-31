@@ -5,14 +5,9 @@ Renders the provenance graph using streamlit-flow-component.
 
 Interaction model
 ~~~~~~~~~~~~~~~~~
-streamlit-flow-component does not expose a hover callback, so path
-highlighting is driven by **node click** via `get_node_on_click=True`.
-The component returns the clicked node's id directly into Python on each
-rerun.
-On the next rerun, `build_streamlit_flow_elements(highlighted_node=clicked)`
-rebuilds the node/edge lists with highlight styles applied, and a fresh
-StreamlitFlowState is passed to streamlit_flow() — the graph re-renders
-with the highlighted path.
+Path highlighting is driven by node click via get_node_on_click=True.
+The component returns the clicked node's id on each rerun; the caller
+passes it back as highlighted_node to rebuild with highlight styles.
 """
 
 from __future__ import annotations
@@ -23,8 +18,8 @@ import streamlit as st
 from streamlit_flow import streamlit_flow
 from streamlit_flow.state import StreamlitFlowState
 
-from data.graph_data import LEAF_IDS, NODE_MAP
-from utils.graph_utils import build_streamlit_flow_elements
+from data.graph_data import LEAF_IDS
+from utils.graph_builders import build_streamlit_flow_elements
 
 # ---------------------------------------------------------------------------
 # Session-state key
@@ -42,13 +37,12 @@ def render_provenance_graph(highlighted_node: Optional[str] = None) -> Optional[
     Render the provenance graph and return the id of the clicked node,
     or None if nothing was clicked this rerun.
 
-    The caller (main_view.py) is responsible for persisting the returned value
-    into session_state and passing it back as `highlighted_node` on the
-    next call.
+    The caller (main_view.py) is responsible for persisting the returned
+    value into session_state and passing it back as highlighted_node on
+    the next call.
     """
     print(f"<Prov Graph> node id: {highlighted_node}")
 
-    # Cache key for this graph build
     cache_key = f"prov_graph_{highlighted_node}"
 
     if cache_key not in st.session_state:
@@ -72,12 +66,8 @@ def render_provenance_graph(highlighted_node: Optional[str] = None) -> Optional[
         style={"background": "#F8FAFC"},
     )
 
-    # streamlit_flow returns the full updated state; the clicked node id is
-    # stored in state.selected_id when get_node_on_click=True.
     if result and hasattr(result, "selected_id") and result.selected_id:
         clicked_id = result.selected_id
-        # Only leaf nodes trigger a path highlight
         if clicked_id in LEAF_IDS:
             return clicked_id
-        # Clicking the same leaf again deselects
     return None

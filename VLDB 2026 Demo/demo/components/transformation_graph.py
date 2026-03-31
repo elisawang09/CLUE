@@ -22,7 +22,7 @@ from typing import Optional
 import streamlit as st
 from streamlit_flow import streamlit_flow
 from streamlit_flow.state import StreamlitFlowState
-from utils.graph_utils import build_transformation_flow_elements
+from utils.graph_builders import build_transformation_flow_elements
 
 def render_transformation_graph(leaf_node_id: str):
     """
