@@ -4,6 +4,16 @@ from .top_view import render_top_view
 from .simulation_result_graph import render_simulation_graph
 from utils.graph_styles import legend_style_html
 from utils.tooltip_overlay import inject_tooltip_overlay
+from utils.slider_calculations import (
+    calculate_target_pltv,
+    generate_initial_slider_values,
+    recalculate_sliders_for_target,
+    adjust_sliders_for_target,
+)
+
+# ---------------------------------------------------------------------------
+# Goal Setting Controls
+# ---------------------------------------------------------------------------
 
 def _initialize_simulator_state() -> None:
     """Initialize session keys used by simulator controls and actions."""
@@ -19,15 +29,6 @@ def _initialize_simulator_state() -> None:
         st.session_state.pltv_input = int(st.session_state.pltv)
 
 
-def _get_suggestion_texts() -> list[str]:
-    """Return strategy suggestions shown in the simulator panel."""
-    return [
-        "Get 400 additional orders from existing customers",
-        "Activate 200 new visitors and generate 2 orders from each of them at an average value of $60 ",
-        "Encourage the top 30% of active customers to place 3 additional orders each",
-    ]
-
-
 def _render_step_slider() -> None:
     STEP_SIZE = 5
 
@@ -37,14 +38,21 @@ def _render_step_slider() -> None:
         st.session_state.pltv = max(10, int(st.session_state.pltv) - STEP_SIZE)
         st.session_state.pltv_input = int(st.session_state.pltv)
 
+        # Recalculate slider values for new target
+        recalculate_sliders_for_target()
+
     def _increment_pltv() -> None:
         """Increase PLTV input by one step while enforcing upper bound."""
         st.session_state.pltv = min(100, int(st.session_state.pltv) + STEP_SIZE)
         st.session_state.pltv_input = int(st.session_state.pltv)
 
+        recalculate_sliders_for_target()
+
     def _sync_pltv_from_input() -> None:
         """Synchronize the step-control backing value from manual number input."""
         st.session_state.pltv = int(st.session_state.pltv_input)
+
+        recalculate_sliders_for_target()
 
     # Hide native number_input steppers so only custom +/- buttons are visible.
     st.markdown(
@@ -98,17 +106,45 @@ def _render_step_slider() -> None:
 
 def _render_goal_controls() -> None:
     """Render the left-card goal controls and recommendation trigger."""
+
+    if "prob_active" not in st.session_state or "num_orders" not in st.session_state or "order_value" not in st.session_state:
+        generate_initial_slider_values(st.session_state.pltv_input)
+
     with st.container(key="goal_controls_stack"):
         _render_step_slider()
 
         st.markdown("<h6 style='text-align: center;'>Probability of Active</h6>", unsafe_allow_html=True)
-        st.slider("Probability of Active", min_value=0.0, max_value=1.0, value=0.4, label_visibility="collapsed")
+        st.slider(
+            "Probability of Active",
+            min_value=0.0,
+            max_value=1.0,
+            value=st.session_state.prob_active,
+            label_visibility="collapsed",
+            key="prob_active",
+            on_change=lambda: adjust_sliders_for_target("prob")
+        )
 
         st.markdown("<h6 style='text-align: center;'>Expected Number of Orders</h6>", unsafe_allow_html=True)
-        st.slider("Expected Number of Orders", min_value=0, max_value=10, value=5, label_visibility="collapsed")
+        st.slider(
+            "Expected Number of Orders",
+            min_value=0,
+            max_value=10,
+            value=st.session_state.num_orders,
+            label_visibility="collapsed",
+            key="num_orders",
+            on_change=lambda: adjust_sliders_for_target("num_orders")
+        )
 
         st.markdown("<h6 style='text-align: center;'>Expected Order Value ($)</h6>", unsafe_allow_html=True)
-        st.slider("Expected Order Value ($)", min_value=1, max_value=100, value=50, label_visibility="collapsed")
+        st.slider(
+            "Expected Order Value ($)",
+            min_value=1,
+            max_value=100,
+            value=st.session_state.order_value,
+            label_visibility="collapsed",
+            key="order_value",
+            on_change=lambda: adjust_sliders_for_target("order_value")
+        )
 
         if st.button(
             "Recommend Strategies",
@@ -119,6 +155,18 @@ def _render_goal_controls() -> None:
             st.session_state.show_suggestions = not st.session_state.show_suggestions
             st.rerun()
 
+
+# ---------------------------------------------------------------------------
+# Suggestions
+# ---------------------------------------------------------------------------
+
+def _get_suggestion_texts() -> list[str]:
+    """Return strategy suggestions shown in the simulator panel."""
+    return [
+        "Get 400 additional orders from existing customers",
+        "Activate 200 new visitors and generate 2 orders from each of them at an average value of $60 ",
+        "Encourage the top 30% of active customers to place 3 additional orders each",
+    ]
 
 def _render_suggested_fixes_panel() -> None:
     """Render suggestions and selection details in the right-top panel."""

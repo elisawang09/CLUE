@@ -341,7 +341,7 @@ def legend_style_html() -> str:
 def transformation_legend_style_html() -> str:
     """Build the legend for transformation flow nodes."""
     ICON_SIZE = 24
-    STATIC_URL = "http://localhost:8502/app/static"
+    STATIC_URL = "http://localhost:8501/app/static"
 
     transform_types = [
         ("source_table", "Source Table"),
