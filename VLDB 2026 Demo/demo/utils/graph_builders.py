@@ -190,7 +190,7 @@ def build_transformation_flow_elements(
 
     trans_nodes, trans_edges = TRANSFORMATION_FLOWS[leaf_node_id]
 
-    STATIC_URL = "http://localhost:8502/app/static"
+    STATIC_URL = "http://localhost:8501/app/static"
     TX_SCALE, TY_SCALE   = 280, 140
     TX_OFFSET, TY_OFFSET = 20,  40
 

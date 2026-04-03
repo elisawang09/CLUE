@@ -24,7 +24,7 @@ def _initialize_simulator_state() -> None:
     if "simulation_started" not in st.session_state:
         st.session_state.simulation_started = False
     if "pltv" not in st.session_state:
-        st.session_state.pltv = 20
+        st.session_state.pltv = 10
     if "pltv_input" not in st.session_state:
         st.session_state.pltv_input = int(st.session_state.pltv)
 
@@ -103,6 +103,8 @@ def _render_step_slider() -> None:
                     type="primary",
                 )
 
+        st.markdown("Current PLTV: " + f"**$100**", text_alignment="center", unsafe_allow_html=True)
+
 
 def _render_goal_controls() -> None:
     """Render the left-card goal controls and recommendation trigger."""
@@ -113,6 +115,7 @@ def _render_goal_controls() -> None:
     with st.container(key="goal_controls_stack"):
         _render_step_slider()
 
+        st.space(size='small')
         st.markdown("<h6 style='text-align: center;'>Probability of Active</h6>", unsafe_allow_html=True)
         st.slider(
             "Probability of Active",
@@ -123,6 +126,7 @@ def _render_goal_controls() -> None:
             key="prob_active",
             on_change=lambda: adjust_sliders_for_target("prob")
         )
+        st.space(size='small')
 
         st.markdown("<h6 style='text-align: center;'>Expected Number of Orders</h6>", unsafe_allow_html=True)
         st.slider(
@@ -134,6 +138,7 @@ def _render_goal_controls() -> None:
             key="num_orders",
             on_change=lambda: adjust_sliders_for_target("num_orders")
         )
+        st.space(size='small')
 
         st.markdown("<h6 style='text-align: center;'>Expected Order Value ($)</h6>", unsafe_allow_html=True)
         st.slider(
@@ -171,7 +176,7 @@ def _get_suggestion_texts() -> list[str]:
 def _render_suggested_fixes_panel() -> None:
     """Render suggestions and selection details in the right-top panel."""
     with st.container(border=True, height=285, key="card_sim_suggestions"):
-        st.subheader("Suggested Data Fixes")
+        st.subheader("Suggested Strategies 🤖", help="AI generated suggestions to improve PLTV based on the current gap and data. Select one strategies to simulate its impact on the metric.")
         if not st.session_state.show_suggestions:
             return
 
