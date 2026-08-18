@@ -1,5 +1,18 @@
 import streamlit as st
 
+# Metrics offered in the search box. Module-level so main.py can validate an
+# incoming ?metric= parameter against it -- Streamlit raises if a selectbox's
+# session_state value is not one of its options.
+METRIC_SUGGESTIONS = [
+    "Page Views",
+    "Paying Users",
+    "PLTV",
+    "Retention Rate",
+    "Total Revenue",
+    "Profit",
+]
+
+
 def render_top_view(button_text: str, view_type: str) -> None:
     """Render the common top bar with app title, metric selector, and view switch button."""
     with st.container():
@@ -12,18 +25,9 @@ def render_top_view(button_text: str, view_type: str) -> None:
             st.title("CLUE")
 
         with col_search:
-            metric_suggestions = [
-                "Page Views",
-                "Paying Users",
-                "PLTV",
-                "Retention Rate",
-                "Total Revenue",
-                "Profit"
-            ]
-
             st.selectbox(
                 "",
-                options=metric_suggestions,
+                options=METRIC_SUGGESTIONS,
                 index=None,
                 key="search_query",
                 placeholder="Search a metric (e.g., total revenue)",

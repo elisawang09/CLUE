@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(md5 *.parquet)",
+      "Bash(tee /private/tmp/claude-501/-Users-elisawang-Desktop-CLUE-Demo-CLUE/877c84e0-4457-42d0-be77-194fa1240bbb/scratchpad/before.txt)",
+      "Bash(mkdir -p \"/private/tmp/claude-501/-Users-elisawang-Desktop-CLUE-Demo-CLUE/877c84e0-4457-42d0-be77-194fa1240bbb/scratchpad\")",
+      "Bash(md5 -q customer_age_facts.parquet customers.parquet order_items.parquet orders.parquet products.parquet)",
+      "Bash(../.venv/bin/python /private/tmp/claude-501/-Users-elisawang-Desktop-CLUE-Demo-CLUE/877c84e0-4457-42d0-be77-194fa1240bbb/scratchpad/validate_build.py)",
+      "Bash(../.venv/bin/python -m datasource.build)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ]
+  }
+}

@@ -35,3 +35,10 @@ paper.pdf
 *.pyc
 .venv/
 __pycache__/
+*_spec.md
+
+# Baseline dashboard data: ~546 MB of raw CSV plus generated parquet.
+baseline_dashboard/data/
+# Study session assignments and interaction logs (participant data).
+baseline_dashboard/study/sessions.json
+baseline_dashboard/logs/
