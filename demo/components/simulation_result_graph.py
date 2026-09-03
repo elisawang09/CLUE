@@ -20,7 +20,7 @@ import streamlit as st
 from streamlit_flow import streamlit_flow
 from streamlit_flow.state import StreamlitFlowState
 
-from data.graph_data import SimulationDelta, SIMULATION_DELTAS
+from data.graph_data import SimulationDelta, simulation_deltas
 from utils.graph_builders import build_simulation_flow_elements
 
 # ---------------------------------------------------------------------------
@@ -42,11 +42,11 @@ def render_simulation_graph(
     Parameters
     ----------
     deltas :
-        Optional override for node delta data.  When None, the default
-        SIMULATION_DELTAS defined in graph_data.py are used.  Pass a
+        Optional override for node delta data.  When None, the scenario
+        propagated from the historical baseline by graph_data is used.  Pass a
         custom dict to reflect dynamically computed simulation results.
     """
-    effective_deltas = deltas if deltas is not None else SIMULATION_DELTAS
+    effective_deltas = deltas if deltas is not None else simulation_deltas()
 
     if deltas is None:
         cache_key = _SIM_GRAPH_KEY

@@ -17,12 +17,18 @@ from data.graph_data import NodeType
 from data.graph_data import DeltaDirection, NodeType, SimulationDelta
 
 
+# Where the node icons in demo/static are served from. Root-relative so it
+# resolves against whichever port CLUE is running on -- the study runs it on
+# 8502, and an absolute URL would point at the baseline dashboard instead.
+STATIC_URL = "/app/static"
+
+
 # ---------------------------------------------------------------------------
 # Color palette
 # ---------------------------------------------------------------------------
 
 COLORS: dict[str, str] = {
-    # Root (PLTV orange box)
+    # Root (6-Month Customer Value orange box)
     "root_bg":      "#FCE4C6",
     "root_border":  "#F4A23A",
     "root_text":    "#C97A10",
@@ -64,6 +70,62 @@ TRANSFORMATION_COLORS: dict[str, dict[str, str]] = {
     "aggregation":  {"bg": "#DCF5E3", "border": "#059669", "text": "#900B09"},
     "output":       {"bg": "#F3E8FF", "border": "#A855F7", "text": "#392C05"},
 }
+
+
+# ---------------------------------------------------------------------------
+# Tooltip text
+# ---------------------------------------------------------------------------
+
+def tooltip_attr(text: str) -> str:
+    """
+    Encode text for a data-flow-tooltip attribute.
+
+    Newlines become &#10; so the parser hands the overlay a real line break --
+    the tooltip renders with white-space: pre-line, which is what lets a
+    description separate its SQL from the sentence explaining it.
+    """
+    return text.replace('"', "&quot;").replace("\n", "&#10;")
+
+
+# ---------------------------------------------------------------------------
+# Layout metrics
+# ---------------------------------------------------------------------------
+#
+# Nodes size themselves to their text in CSS (width: max-content), so these
+# estimates only need to be an upper bound: the layout uses them to decide
+# where the next column starts, and over-estimating costs a little whitespace
+# while under-estimating would let a long node collide with its operator.
+
+_ROOT_CHAR_WIDTH = 12.5     # 20px, bold
+_METRIC_CHAR_WIDTH = 9.0    # 16px
+_BADGE_CHAR_WIDTH = 7.5     # 12-14px delta badge under a simulation node
+_SYMBOL_WIDTH = 26          # leading "#" / "%" and its spacing
+_NODE_PADDING = 36          # left + right padding and border
+OPERATOR_WIDTH = 44         # the diamond SVG
+
+
+def estimated_node_width(node, extra_text: Optional[str] = None) -> float:
+    """
+    Approximate rendered width of a graph node, for column placement.
+
+    `extra_text` is any second line rendered under the label (the simulation
+    delta badge), which can be wider than the label itself.
+    """
+    if node.node_type == NodeType.OPERATOR:
+        return OPERATOR_WIDTH
+
+    if node.node_type == NodeType.ROOT:
+        width = len(node.label) * _ROOT_CHAR_WIDTH + _NODE_PADDING
+    else:
+        width = (
+            len(node.label) * _METRIC_CHAR_WIDTH
+            + (_SYMBOL_WIDTH if node.symbol else 0)
+            + _NODE_PADDING
+        )
+
+    if extra_text:
+        width = max(width, len(extra_text) * _BADGE_CHAR_WIDTH + _NODE_PADDING)
+    return width
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +181,10 @@ def node_style(node, highlighted: bool) -> dict:
             "color":      COLORS["root_text"],
             "fontWeight": "700",
             "fontSize":   "20px",
+            "padding":    "8px 18px",
+            "whiteSpace": "nowrap",
+            "width":      "max-content",
+            "maxWidth":   "none",
         })
     elif node.node_type == NodeType.OPERATOR:
         base.update({
@@ -156,7 +222,10 @@ def node_style(node, highlighted: bool) -> dict:
             "cursor":       "pointer",
             "whiteSpace":   "nowrap",
             "minWidth":     "auto",
-            "maxWidth":     "250px",
+            # Sized to its own text: a fixed cap clipped the longer metric
+            # names. The layout leaves room for whatever this comes out as.
+            "width":        "max-content",
+            "maxWidth":     "none",
         })
 
     return base
@@ -179,8 +248,14 @@ def node_style_sim(node) -> dict:
 # Node label builders
 # ---------------------------------------------------------------------------
 
-def node_label(node, highlighted: bool = False) -> str:
-    """Build the display label string for a provenance graph node."""
+def node_label(node, highlighted: bool = False, value: Optional[str] = None) -> str:
+    """
+    Build the display label string for a provenance graph node.
+
+    `value` is the node's computed value; it is appended to the hover tooltip
+    rather than the label, so the graph keeps its shape while every node can
+    still be read against the current numbers.
+    """
     if node.node_type == NodeType.OPERATOR:
         return operator_svg_icon(node.symbol or "", highlighted)
 
@@ -191,9 +266,14 @@ def node_label(node, highlighted: bool = False) -> str:
     else:
         raw = node.label
 
-    if node.description:
-        tip = node.description.replace('"', '&quot;')
-        return f'<span data-flow-tooltip="{tip}">{raw}</span>'
+    tooltip_parts = [part for part in (node.description,
+                                       f"Historical baseline: {value}" if value else None)
+                     if part]
+    if tooltip_parts:
+        return (
+            f'<span data-flow-tooltip="{tooltip_attr(chr(10).join(tooltip_parts))}">'
+            f'{raw}</span>'
+        )
     return raw
 
 
@@ -241,7 +321,7 @@ def _delta_html(delta: SimulationDelta) -> str:
     else:
         badge = f'{value_html}{prev_html}'
 
-    tip = f'data-flow-tooltip="{delta.description.replace(chr(34), "&quot;")}"' if delta.description else ''
+    tip = f'data-flow-tooltip="{tooltip_attr(delta.description)}"' if delta.description else ''
     return (
         f'<div style="display:flex; flex-direction:column; align-items:center; gap:2px;" {tip}>'
         f'<span style="white-space:nowrap; margin:0;">{{label_placeholder}}</span>'
@@ -258,7 +338,8 @@ def node_label_sim(
     Build the display label for a simulation graph node.
 
     Wraps the standard provenance label with a delta badge when a
-    SimulationDelta is provided.
+    SimulationDelta is provided. The delta carries its own tooltip, so the
+    node's own value is left off here.
     """
     if node.node_type == NodeType.OPERATOR:
         return operator_svg_icon(node.symbol or "", highlighted=False)
@@ -279,7 +360,7 @@ def transformation_node_html(node, static_url: str) -> str:
     """Build the inner HTML string for a transformation flow node."""
     ICON_SIZE = 50
 
-    tip = f'data-flow-tooltip="{node.description.replace(chr(34), "&quot;")}"' if node.description else ''
+    tip = f'data-flow-tooltip="{tooltip_attr(node.description)}"' if node.description else ''
     html = f'<div class="node_label" style="display:flex; flex-direction:column; align-items:center; gap:2px; font-size:15px;" {tip}>'
     if node.icon:
         html += (
@@ -293,6 +374,13 @@ def transformation_node_html(node, static_url: str) -> str:
     return html
 
 
+# Fixed so every node in a flow is the same height, which puts every
+# connection handle at the same offset from its row -- an edge running from
+# one row to a waypoint on the same row is then exactly horizontal. Content is
+# an icon (50px) over one line of text, so this leaves room to spare.
+TRANSFORMATION_NODE_HEIGHT = 84
+
+
 def transformation_node_style(node) -> dict:
     """Return a CSS-style dict for a transformation flow node."""
     colors = TRANSFORMATION_COLORS.get(node.node_type.value, TRANSFORMATION_COLORS["source_table"])
@@ -302,6 +390,7 @@ def transformation_node_style(node) -> dict:
         "color":          colors["text"],
         "borderRadius":   "8px",
         "padding":        "2px",
+        "height":         f"{TRANSFORMATION_NODE_HEIGHT}px",
         "fontSize":       "16px",
         "fontWeight":     "500",
         "cursor":         "default",
@@ -309,7 +398,8 @@ def transformation_node_style(node) -> dict:
         "alignItems":     "center",
         "justifyContent": "center",
         "whiteSpace":     "nowrap",
-        "maxWidth":       "200px",
+        "width":          "max-content",
+        "maxWidth":       "none",
         "minWidth":       "130px",
     }
 
@@ -325,7 +415,7 @@ def legend_style_html() -> str:
                         background:#fff;border:1px solid #E2E8F0;border-radius:8px;
                         font-size:0.8rem;color:#374151;align-items:center">
             <span><span style="background:{COLORS['root_bg']}; border:3px solid {COLORS['root_border']};border-radius:4px;
-                padding:1px 8px; color:{COLORS['root_text']}; font-weight:700">PLTV</span>&nbsp; Root</span>
+                padding:1px 8px; color:{COLORS['root_text']}; font-weight:700">6-Month Customer Value</span>&nbsp; Root</span>
             <span><span style="background:{COLORS['op_bg']};border:1.5px solid {COLORS['op_border']};
                 border-radius:4px;padding:1px 8px;color:{COLORS['op_text']}">&times; &div;</span>&nbsp; Operator</span>
             <span><span style="background:{COLORS['ratio_bg']};border:1.5px solid {COLORS['ratio_border']};
@@ -341,7 +431,6 @@ def legend_style_html() -> str:
 def transformation_legend_style_html() -> str:
     """Build the legend for transformation flow nodes."""
     ICON_SIZE = 24
-    STATIC_URL = "http://localhost:8501/app/static"
 
     transform_types = [
         ("source_table", "Source Table"),

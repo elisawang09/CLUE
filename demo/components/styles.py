@@ -61,15 +61,15 @@ def _build_app_css() -> str:
         }}
 
         /* Explicit white card styling via keyed containers */
-        .st-key-card_sim_goal,
-        .st-key-card_sim_suggestions,
+        .st-key-card_sim_controls_row,
+        .st-key-card_sim_starters,
         .st-key-card_sim_output,
         .st-key-card_main_overview,
         .st-key-card_main_explanation,
         .st-key-card_main_provenance,
         .st-key-card_main_transformation,
-        .st-key-card_sim_goal > div,
-        .st-key-card_sim_suggestions > div,
+        .st-key-card_sim_controls_row > div,
+        .st-key-card_sim_starters > div,
         .st-key-card_sim_output > div,
         .st-key-card_main_overview > div,
         .st-key-card_main_explanation > div,
@@ -117,24 +117,24 @@ def _build_app_css() -> str:
             background: #C8D7F6 !important;
         }}
 
-        /* Match control heights in the PLTV step row */
-        .st-key-pltv_step_row div.stButton > button {{
+        /* Match control heights in the planning goal step row */
+        .st-key-goal_step_row div.stButton > button {{
             min-height: 34px !important;
         }}
 
-        .st-key-pltv_step_row [data-testid="stNumberInput"] input {{
+        .st-key-goal_step_row [data-testid="stNumberInput"] input {{
             height: 34px !important;
             text-align: center;
         }}
 
         .st-key-div_minus button,
-        .st-key-pltv_plus button {{
+        .st-key-goal_plus button {{
             color: transparent !important;
             position: relative;
         }}
 
         .st-key-div_minus button::before,
-        .st-key-pltv_plus button::before {{
+        .st-key-goal_plus button::before {{
             position: absolute;
             left: 50%;
             top: 50%;
@@ -149,53 +149,24 @@ def _build_app_css() -> str:
             content: "−";
         }}
 
-        .st-key-pltv_plus button::before {{
+        .st-key-goal_plus button::before {{
             content: "+";
         }}
 
-        /* Compact and align controls in the simulator goal panel */
-        .st-key-goal_controls_stack h6 {{
-            margin: 0.03rem 0 0.01rem 0 !important;
-        }}
-
-        .st-key-goal_controls_stack [data-testid="stSlider"],
-        .st-key-goal_controls_stack [data-testid="stNumberInput"],
-        .st-key-goal_controls_stack div.stButton {{
+        /* Compact the controls row so five columns fit without scrolling */
+        .st-key-card_sim_controls_row [data-testid="stSlider"],
+        .st-key-card_sim_controls_row [data-testid="stNumberInput"],
+        .st-key-card_sim_controls_row div.stButton {{
             width: 100% !important;
             margin-bottom: 0.04rem !important;
         }}
 
-        .st-key-goal_controls_stack [data-testid="stVerticalBlock"] > div {{
+        .st-key-card_sim_controls_row [data-testid="stVerticalBlock"] > div {{
             padding-top: 0 !important;
             padding-bottom: 0 !important;
         }}
 
-        /* Pin final action near bottom of the goal card */
-        .st-key-card_sim_goal {{
-            position: relative;
-        }}
-
-        .st-key-goal_controls_stack {{
-            padding-bottom: 2.9rem;
-        }}
-
-        .st-key-get_suggestions {{
-            position: absolute;
-            left: 50%;
-            width: 200px;
-            transform: translateX(-50%);
-            bottom: 0.7rem;
-            z-index: 3;
-            margin: 0 !important;
-        }}
-
-        .st-key-get_suggestions > div.stButton,
-        .st-key-get_suggestions > div.stButton > button {{
-            width: 200px !important;
-        }}
-
-        .st-key-goal_controls_stack [data-testid="stMarkdownContainer"] p,
-        .st-key-goal_controls_stack [data-testid="stMarkdownContainer"] h6 {{
+        .st-key-card_sim_controls_row [data-testid="stMarkdownContainer"] p {{
             margin-bottom: 0.04rem !important;
             margin-top: 0.04rem !important;
         }}
@@ -238,7 +209,7 @@ def inject_app_styles():
     inject_checkbox_styles()
 
 def get_selected_text_style() -> str:
-    """Returns styled text wrapper for selected items in Simulator Suggestions."""
+    """Returns styled text wrapper for selected items in the Scenario Starters panel."""
     return f'<span style="color: {TEXT_SELECTED_COLOR}; background-color: {TEXT_SELECTED_BG}; padding: 2px 6px; border-radius: 3px;">'
 
 def get_detail_box_html(content: str) -> str:

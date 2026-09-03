@@ -1,22 +1,15 @@
 import streamlit as st
 
-# Metrics offered in the search box. Module-level so main.py can validate an
-# incoming ?metric= parameter against it -- Streamlit raises if a selectbox's
-# session_state value is not one of its options.
-METRIC_SUGGESTIONS = [
-    "Page Views",
-    "Paying Users",
-    "PLTV",
-    "Retention Rate",
-    "Total Revenue",
-    "Profit",
-]
+# The metric CLUE explains. Participants arrive from the baseline dashboard
+# with this metric already chosen, so there is no selector here -- every view
+# checks against this name rather than a literal.
+PRIMARY_METRIC = "6-Month Customer Value"
 
 
 def render_top_view(button_text: str, view_type: str) -> None:
-    """Render the common top bar with app title, metric selector, and view switch button."""
+    """Render the common top bar with app title, metric name, and view switch button."""
     with st.container():
-        col_title, col_search, col_button = st.columns(
+        col_title, col_metric, col_button = st.columns(
             [0.1, 0.3, 0.1],
             vertical_alignment="bottom",
         )
@@ -24,19 +17,17 @@ def render_top_view(button_text: str, view_type: str) -> None:
         with col_title:
             st.title("CLUE")
 
-        with col_search:
-            st.selectbox(
-                "",
-                options=METRIC_SUGGESTIONS,
-                index=None,
-                key="search_query",
-                placeholder="Search a metric (e.g., total revenue)",
+        with col_metric:
+            st.markdown(
+                f"<div style='padding-bottom:0.75rem; font-size:1.05rem; "
+                f"color:#2C3770;'><b>{PRIMARY_METRIC}</b></div>",
+                unsafe_allow_html=True,
             )
 
         with col_button:
             if st.button(
                 button_text,
-                key="search_btn",
+                key="view_switch_btn",
                 use_container_width=True,
                 type="primary",
             ):

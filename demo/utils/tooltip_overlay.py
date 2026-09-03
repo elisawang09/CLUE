@@ -51,7 +51,9 @@ _BOOTSTRAP_HTML = """<!DOCTYPE html><html><body>
         'line-height:1.5',
         'pointer-events:none',
         'box-shadow:0 4px 16px rgba(0,0,0,.25)',
-        'white-space:normal',
+        // pre-line so a description can break between its SQL and the
+        // sentence explaining it, while still wrapping long lines.
+        'white-space:pre-line',
         'word-break:break-word',
     ].join(';');
     parentDoc.body.appendChild(tip);
@@ -103,6 +105,31 @@ _BOOTSTRAP_HTML = """<!DOCTYPE html><html><body>
         return null;
     }
 
+    // Operation chips on transformation edges. An edge label is SVG text, so
+    // it cannot carry a data attribute of its own; the detail rides along on
+    // the edge's aria-label instead. Only the chip triggers it -- hovering the
+    // wire between two nodes does nothing.
+    function findEdgeTip(el, root) {
+        let inLabel = false;
+        while (el && el !== root) {
+            const classes = el.classList;
+            if (classes && classes.contains('react-flow__edge-textwrapper'))
+                inLabel = true;
+            if (inLabel && classes && classes.contains('react-flow__edge')) {
+                const text = el.getAttribute('aria-label');
+                // React Flow's own fallback label, not one of ours.
+                if (text && text.indexOf('Edge from ') !== 0) return text;
+                return null;
+            }
+            el = el.parentElement;
+        }
+        return null;
+    }
+
+    function tipFor(el, root) {
+        return findTip(el, root) || findEdgeTip(el, root);
+    }
+
     const attached = new WeakMap();
 
     function isAttached(iframe) {
@@ -130,7 +157,7 @@ _BOOTSTRAP_HTML = """<!DOCTYPE html><html><body>
         }
 
         doc.addEventListener('mouseover', function(e) {
-            const t = findTip(e.target, doc.body);
+            const t = tipFor(e.target, doc.body);
             if (t) {
                 const [x, y] = coords(e.clientX, e.clientY);
                 showTip(t, x, y);
@@ -147,8 +174,8 @@ _BOOTSTRAP_HTML = """<!DOCTYPE html><html><body>
         doc.addEventListener('mouseleave', hideTip, true);
 
         doc.addEventListener('mouseout', function(e) {
-            const from = findTip(e.target, doc.body);
-            const to   = findTip(e.relatedTarget, doc.body);
+            const from = tipFor(e.target, doc.body);
+            const to   = tipFor(e.relatedTarget, doc.body);
             if (from && !to) hideTip();
         }, true);
     }

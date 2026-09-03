@@ -1,122 +1,79 @@
 """
-Calculation utilities for simulator slider state management.
-Handles target PLTV calculations and slider value adjustments.
+Session-state plumbing for the simulator's scenario controls.
+
+Each factor moves on its own: the scenario KPI is computed from whatever the
+three assumptions say and then compared against the goal, so a scenario is free
+to land above or below it. Nothing here writes back to the historical baseline.
 """
+
+from __future__ import annotations
 
 import streamlit as st
 
+from data.metrics import BaselineMetrics
+from data.scenario import DEFAULT_UPLIFT_PERCENT, Scenario, from_baseline
 
-def calculate_target_pltv() -> float:
-    """Calculate target PLTV based on pltv_input: 100 * (1 + pltv_input/100)."""
-    return 100 * (1 + st.session_state.pltv_input / 100)
+# Session keys for the three assumptions and the planning goal.
+CONVERSION_KEY = "sim_conversion"
+ORDERS_KEY = "sim_orders_per_cust"
+ORDER_VALUE_KEY = "sim_order_value"
+UPLIFT_KEY = "sim_uplift"
+UPLIFT_INPUT_KEY = "sim_uplift_input"
+
+# Goal stepper bounds, in percent above the historical baseline.
+UPLIFT_MIN, UPLIFT_MAX, UPLIFT_STEP = 0, 100, 5
 
 
-def generate_initial_slider_values(target: float) -> tuple[float, int, int]:
+def slider_bounds(baseline: BaselineMetrics) -> dict[str, tuple[float, float, float]]:
     """
-    Generate initial values for the three sliders such that their product equals target.
+    (min, max, step) per factor, scaled to the observed values.
 
-    Args:
-        target: The target product value for the three sliders
-
-    Returns:
-        tuple: (probability_of_active, num_orders, order_value)
+    Room to move in both directions -- twice the baseline at the top -- rather
+    than a fixed range, which cannot fit factors as different in scale as a
+    conversion rate and an order count. The conversion rate is held in
+    percentage points so the slider labels itself in the units the metric is
+    read in.
     """
-    # Start with a baseline product and scale it to reach target
-    # Initial baseline: 0.4 * 5 * 50 = 100
-    baseline_product = 100.0
-    scale_factor = target / baseline_product
-
-    # Scale proportionally
-    prob_active = min(1.0, max(0.0, 0.4 * (scale_factor ** (1/3))))
-    num_orders = min(10, max(0, int(5 * (scale_factor ** (1/3)))))
-
-    # Adjust order value to hit the exact target
-    if prob_active > 0 and num_orders > 0:
-        order_value = target / (prob_active * num_orders)
-        order_value = min(100, max(1, int(order_value)))
-    else:
-        order_value = 50
-
-    st.session_state.prob_active = prob_active
-    st.session_state.num_orders = num_orders
-    st.session_state.order_value = order_value
-
-    return prob_active, num_orders, order_value
+    return {
+        CONVERSION_KEY: (0.0, 100.0, 0.5),
+        ORDERS_KEY: (
+            0.0,
+            round(baseline.orders_per_purchasing_customer * 2, 1),
+            0.1,
+        ),
+        ORDER_VALUE_KEY: (
+            0.0,
+            round(baseline.average_order_value * 2, 2),
+            0.01,
+        ),
+    }
 
 
-def recalculate_sliders_for_target() -> None:
-    """
-    Recalculate slider values to hit the target PLTV.
-    This is used when the target PLTV changes, and we want to adjust sliders to match the new target.
-    """
-    # Recalculate slider values for new target
-    target = calculate_target_pltv()
-    generate_initial_slider_values(target)
+def initialize_scenario_state(baseline: BaselineMetrics) -> None:
+    """Seed the controls at the historical baseline, on first render only."""
+    defaults = {
+        CONVERSION_KEY: float(baseline.conversion_rate) * 100,
+        ORDERS_KEY: float(baseline.orders_per_purchasing_customer),
+        ORDER_VALUE_KEY: float(baseline.average_order_value),
+        UPLIFT_KEY: DEFAULT_UPLIFT_PERCENT,
+        UPLIFT_INPUT_KEY: DEFAULT_UPLIFT_PERCENT,
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
 
 
-def adjust_sliders_for_target(changed_slider: str) -> None:
-    """
-    Adjust the other sliders to maintain product equal to target.
+def current_scenario(baseline: BaselineMetrics) -> Scenario:
+    """The scenario the controls currently describe."""
+    if CONVERSION_KEY not in st.session_state:
+        return from_baseline(baseline)
+    return Scenario(
+        conversion_rate=float(st.session_state[CONVERSION_KEY]) / 100,
+        orders_per_purchasing_customer=float(st.session_state[ORDERS_KEY]),
+        average_order_value=float(st.session_state[ORDER_VALUE_KEY]),
+        acquired_users=baseline.acquired_users,
+    )
 
-    When one slider is changed, recalculates the other two to maintain:
-    prob_active × num_orders × order_value = target
 
-    Args:
-        changed_slider: Which slider was changed ('prob', 'num_orders', or 'order_value')
-    """
-    target = calculate_target_pltv()
-
-    prob_active = st.session_state.prob_active
-    num_orders = st.session_state.num_orders
-    order_value = st.session_state.order_value
-
-    if changed_slider == "prob":
-        # Adjust num_orders and order_value
-        remaining_product = target / max(prob_active, 0.01)
-
-        # Try to keep order_value in valid range, adjust num_orders
-        if order_value > 0:
-            num_orders = remaining_product / order_value
-            num_orders = min(10, max(0, int(num_orders)))
-
-            # Recalculate order_value to hit exact target
-            if num_orders > 0:
-                order_value = remaining_product / num_orders
-                order_value = min(100, max(1, int(order_value)))
-
-        st.session_state.num_orders = num_orders
-        st.session_state.order_value = order_value
-
-    elif changed_slider == "num_orders":
-        # Adjust prob_active and order_value
-        remaining_product = target / max(num_orders, 1)
-
-        # Try to keep order_value in valid range, adjust prob_active
-        if order_value > 0:
-            prob_active = remaining_product / order_value
-            prob_active = min(1.0, max(0.0, prob_active))
-
-            # Recalculate order_value to hit exact target
-            if prob_active > 0:
-                order_value = remaining_product / prob_active
-                order_value = min(100, max(1, int(order_value)))
-
-        st.session_state.prob_active = prob_active
-        st.session_state.order_value = order_value
-
-    elif changed_slider == "order_value":
-        # Adjust prob_active and num_orders
-        remaining_product = target / max(order_value, 1)
-
-        # Try to keep num_orders in valid range, adjust prob_active
-        if num_orders > 0:
-            prob_active = remaining_product / num_orders
-            prob_active = min(1.0, max(0.0, prob_active))
-
-            # Recalculate num_orders to hit exact target
-            if prob_active > 0:
-                num_orders = remaining_product / prob_active
-                num_orders = min(10, max(0, int(num_orders)))
-
-        st.session_state.prob_active = prob_active
-        st.session_state.num_orders = num_orders
+def uplift_percent() -> float:
+    """Planning goal, as a percentage above the historical baseline."""
+    return float(st.session_state.get(UPLIFT_KEY, DEFAULT_UPLIFT_PERCENT))

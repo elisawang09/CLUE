@@ -32,21 +32,27 @@ _SELECTED_KEY = "selected_node"
 # Public API
 # ---------------------------------------------------------------------------
 
-def render_provenance_graph(highlighted_node: Optional[str] = None) -> Optional[str]:
+def render_provenance_graph(
+    highlighted_node: Optional[str] = None,
+    values: Optional[dict[str, str]] = None,
+) -> Optional[str]:
     """
     Render the provenance graph and return the id of the clicked node,
     or None if nothing was clicked this rerun.
 
     The caller (main_view.py) is responsible for persisting the returned
     value into session_state and passing it back as highlighted_node on
-    the next call.
+    the next call. `values` supplies each node's computed value for its
+    hover tooltip.
     """
     print(f"<Prov Graph> node id: {highlighted_node}")
 
     cache_key = f"prov_graph_{highlighted_node}"
 
     if cache_key not in st.session_state:
-        nodes, edges = build_streamlit_flow_elements(highlighted_node=highlighted_node)
+        nodes, edges = build_streamlit_flow_elements(
+            highlighted_node=highlighted_node, values=values
+        )
         st.session_state[cache_key] = StreamlitFlowState(nodes, edges)
 
     state = st.session_state[cache_key]
