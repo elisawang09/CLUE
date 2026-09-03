@@ -3,10 +3,14 @@ kpi_cards.py
 ------------
 The five headline cards, each with a ⋯ menu holding its interactions.
 
-No sparklines and no period-over-period deltas: the metric describes one
-acquisition cohort observed over its own first months, so a calendar-time
-sparkline would imply a trend the number doesn't have. Each card instead
-carries the cohort it belongs to, which is the context that actually matters.
+Each card reports the *most recent acquisition month* in the reference period,
+compared against the month before it. That comparison is between two cohorts
+observed the same way -- each over its own first 90 days -- which is what makes
+it meaningful; a calendar-time sparkline over a window-based metric would imply
+a trend the number does not have.
+
+The comparison month is the one immediately preceding in the data, not in the
+selection, so narrowing the filter to a single month still shows a change.
 
 The menu is where the study's one manipulated variable lives. In the
 CLUE-enabled condition a mapped metric gains an "Open in CLUE" item; everything
@@ -19,35 +23,103 @@ import streamlit as st
 
 from clue import base_url, clue_url_for, is_clue_running
 from metrics.compute import CohortMetrics
-from metrics.registry import CARD_IDS, METRICS, PRIMARY_ID, formatted_value
+from metrics.registry import (
+    CARD_IDS,
+    METRICS,
+    PRIMARY_ID,
+    formatted_value,
+    percent,
+)
 from study.session import Session
 
-# What a card menu click asks the app to do.
-ACTION_DETAILS = "details"
+# What a card menu click asks the app to do. Only one panel remains: the
+# calculation drill-down was removed from the menu, and with it the only way in.
 ACTION_UNDERLYING = "underlying"
 
 # Fixed so all five cards match regardless of how far their titles wrap --
 # titles run from one line ("Acquired Users") to three ("Orders per Purchasing
-# Customer"), which otherwise leaves the row visibly ragged.
+# Customer"), which otherwise leaves the row visibly ragged. Tall enough for the
+# delta line, which is reserved even when there is no previous month.
 # The primary card carries its emphasis through a larger value font rather than
 # extra width, so the row stays an even five-column grid.
-CARD_HEIGHT = 172
+CARD_HEIGHT = 218
+
+# Which attribute of a MonthMetrics each card compares against last month.
+DELTA_ATTRIBUTES: dict[str, str] = {
+    "customer_value": "customer_value",
+    "conversion_rate": "conversion_rate",
+    "orders_per_purchasing_customer": "orders_per_purchasing_customer",
+    "average_order_value": "average_order_value",
+    "acquired_users": "acquired_users",
+}
+
+
+def _format_delta(metric_id: str, change: float) -> str:
+    """
+    The change itself, in the metric's own units.
+
+    Rates are shown in percentage *points* rather than as a percentage of a
+    percentage, which is the reading people actually want and the one that
+    cannot be misread as a relative change.
+    """
+    metric = METRICS[metric_id]
+    if metric.fmt is percent:
+        return f"{abs(change) * 100:,.1f} pts"
+    return metric.fmt(abs(change))
+
+
+def _delta_html(metric_id: str, metrics: CohortMetrics) -> str:
+    """
+    One card's comparison against the previous acquisition month.
+
+    Renders an empty (but space-reserving) line when there is no previous month
+    -- the earliest cohort in the data has nothing to compare against, and a
+    delta of zero there would be a fabricated number rather than a missing one.
+    """
+    if metrics.previous is None:
+        return '<div class="bd-kpi-delta">&nbsp;</div>'
+
+    attribute = DELTA_ATTRIBUTES[metric_id]
+    change = metrics.delta(attribute)
+    if change is None:
+        return '<div class="bd-kpi-delta">&nbsp;</div>'
+
+    ratio = metrics.delta_ratio(attribute)
+    if change > 0:
+        direction, arrow = "is-up", "▲"
+    elif change < 0:
+        direction, arrow = "is-down", "▼"
+    else:
+        direction, arrow = "is-flat", "—"
+
+    relative = f" ({abs(ratio):.1%})" if ratio is not None else ""
+    context = escape(f"vs {metrics.previous.label}")
+    return (
+        f'<div class="bd-kpi-delta {direction}">'
+        f"{arrow} {_format_delta(metric_id, change)}{relative} "
+        f'<span class="bd-delta-context">{context}</span>'
+        f"</div>"
+    )
 
 
 def _card_body(metric_id: str, metrics: CohortMetrics) -> str:
     """
-    Value and unit only.
+    The cohort month, the value, its unit, and the change against last month.
 
-    The cohort is stated by the filter directly above and again in the footer,
-    so repeating it on all five cards was noise.
+    The month is named on every card rather than left to the filter above: the
+    cards report the latest month in the reference period, not the period
+    itself, so a card carrying only a value would invite reconciling it against
+    the wrong cohort.
     """
     metric = METRICS[metric_id]
     is_primary = metric_id == PRIMARY_ID
     return f"""
+        <div class="bd-kpi-month">{escape(metrics.latest.label)}</div>
         <div class="bd-kpi-value{' is-primary' if is_primary else ''}">
           {formatted_value(metric_id, metrics)}
         </div>
         <div class="bd-kpi-unit">{metric.unit or "&nbsp;"}</div>
+        {_delta_html(metric_id, metrics)}
     """
 
 
@@ -77,14 +149,6 @@ def _render_menu(
     chosen: str | None = None
 
     with st.popover("", icon=":material/more_horiz:", key=f"menu_{metric_id}"):
-        if st.button(
-            "Metric Details",
-            key=f"details_{metric_id}",
-            type="tertiary",
-            width="stretch",
-        ):
-            chosen = ACTION_DETAILS
-
         if st.button(
             "View Underlying Data",
             key=f"underlying_{metric_id}",

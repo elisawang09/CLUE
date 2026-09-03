@@ -1,7 +1,7 @@
 """
 age.py
 ------
-Time-shift constant and the `customer_age_month` derivation.
+Time-shift constant and the two customer-age derivations.
 
 `customer_age_month` is anniversary-based, not calendar-based: month k covers
 [acquisition + (k-1) months, acquisition + k months). A user acquired Dec 10 is
@@ -78,3 +78,34 @@ def customer_age_month(
     incomplete = order_at.dt.day < effective_acq_day
 
     return (months - incomplete.astype(int) + 1).astype("int64")
+
+
+# ---------------------------------------------------------------------------
+# Customer age in days
+# ---------------------------------------------------------------------------
+#
+# The dashboard's observation window is 90 days, which no month-based index can
+# express -- 90 days is not three anniversary months. This is the derivation
+# every windowed metric is filtered on.
+
+def customer_age_days(
+    order_at: pd.Series,
+    acquired_at: pd.Series,
+) -> pd.Series:
+    """
+    Return the 0-based day offset of each order from its customer's acquisition.
+
+    Day 0 is the acquisition day itself, so the first 90 days are offsets
+    0..89. An order placed before acquisition yields a negative offset, which
+    callers are expected to filter out rather than silently keep.
+
+    Date-granular, like `customer_age_month`: both boundaries fall at midnight
+    rather than at the acquisition time of day. A customer acquired at 23:50
+    would otherwise get a 90-day window almost a day shorter than one acquired
+    at 00:10, which is not a distinction cohort analysis makes.
+    """
+    order_at = pd.to_datetime(order_at)
+    acquired_at = pd.to_datetime(acquired_at)
+    return (
+        order_at.dt.normalize() - acquired_at.dt.normalize()
+    ).dt.days.astype("int64")

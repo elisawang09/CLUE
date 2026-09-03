@@ -148,18 +148,11 @@ class TestMenuContents(unittest.TestCase):
             "average_order_value", "acquired_users",
         ):
             with self.subTest(metric=metric_id):
-                self.assertIn(f"details_{metric_id}", keys)
+                # Metric Details was removed from the menu.
+                self.assertNotIn(f"details_{metric_id}", keys)
                 self.assertIn(f"underlying_{metric_id}", keys)
 
-    def test_metric_details_action_opens_the_panel(self):
-        app = run_app(CLUE_TOKEN)
-        app.button(key="details_customer_value").click().run()
-        self.assertFalse(app.exception)
-        self.assertEqual(app.session_state["open_panel"], "details")
-        self.assertEqual(app.session_state["metric_nav"], ["customer_value"])
-
     def test_underlying_action_opens_that_panel_directly(self):
-        """The menu shortcut skips the Metric Details hop."""
         app = run_app(CLUE_TOKEN)
         app.button(key="underlying_average_order_value").click().run()
         self.assertFalse(app.exception)

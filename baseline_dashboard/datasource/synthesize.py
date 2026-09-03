@@ -12,8 +12,7 @@ because study participants must all see the same numbers.
    placed a short lag before each customer's first order.
 
 2. Non-purchasing acquired users -- every customer in the raw data has orders,
-   and with a lag under 60 days all of them buy in age-month 1 or 2. Purchase
-   conversion would therefore be exactly 100% for every cohort, flattening a
+   so purchase conversion would be exactly 100% for every cohort, flattening a
    KPI card and collapsing the headline metric to Orders x AOV. "Value per
    acquired user" only means something when some acquired users never buy.
 """
@@ -27,20 +26,51 @@ import pandas as pd
 # Signup lag
 # ---------------------------------------------------------------------------
 #
-# Lag from account creation to first order, as four 15-day buckets. Most
-# customers buy within a month of signing up; the tail thins out.
+# Lag from account creation to first order. Most customers buy within a month
+# of signing up, and the tail thins out -- but it has to reach past day 90.
+#
+# An earlier version capped the lag at 59 days, which made the dashboard's
+# 90-day observation window inert: every purchaser converted inside it, so
+# 90-day conversion was identical to lifetime conversion and the window did no
+# work at all. The last two buckets are what give the window something to
+# exclude; together they place 15% of purchasers beyond day 90.
 
 LAG_BUCKETS: tuple[tuple[int, int, float], ...] = (
-    (0, 14, 0.30),
-    (15, 29, 0.30),
-    (30, 44, 0.25),
-    (45, 59, 0.15),
+    (0, 14, 0.24),
+    (15, 29, 0.22),
+    (30, 44, 0.17),
+    (45, 59, 0.12),
+    (60, 89, 0.10),
+    (90, 149, 0.09),
+    (150, 269, 0.06),
 )
 
-# Range of purchase conversion rates drawn per cohort month. Centred near the
-# 40% the spec illustrates, wide enough that the conversion card moves when the
-# reference period changes instead of sitting at a constant.
-CONVERSION_RATE_RANGE: tuple[float, float] = (0.30, 0.50)
+# ---------------------------------------------------------------------------
+# Purchase conversion by cohort month
+# ---------------------------------------------------------------------------
+#
+# Conversion is a *function of the cohort month*, not an independent draw per
+# month. Drawing each month independently (as an earlier version did) produced
+# a chart of pure noise: with one bar per acquisition month there was no shape
+# to read, because there was none to find. The terms below are the shape.
+#
+# Level, then a gentle secular decline, then an annual seasonal term, then a
+# small deterministic jitter so the curve is not implausibly smooth. All of it
+# is keyed off the month itself, so the build stays reproducible.
+
+CONVERSION_BASE = 0.46            # roughly where the earliest cohorts sit
+CONVERSION_TREND_PER_YEAR = -0.02  # slow decline across the ~5 years of data
+CONVERSION_SEASONAL_AMPLITUDE = 0.03
+CONVERSION_SEASONAL_PEAK_MONTH = 11  # November, ahead of the holiday season
+CONVERSION_JITTER = 0.024          # peak-to-peak, centred on zero
+
+# Cohort months are dated from the first month in the data, so the trend term
+# does not depend on which slice of months a build happens to produce.
+CONVERSION_EPOCH = pd.Period("2019-10", freq="M")
+
+# Conversion is clamped into this range, so no combination of terms can produce
+# a nonsensical rate at the ends of a longer-than-expected series.
+CONVERSION_BOUNDS: tuple[float, float] = (0.20, 0.60)
 
 
 def _uniforms(keys: pd.Series | list[str], salt: str, count: int = 1) -> np.ndarray:
@@ -87,11 +117,36 @@ def signup_lag_days(customer_ids: pd.Series) -> pd.Series:
 
 
 def conversion_rate_by_month(months: pd.Index) -> pd.Series:
-    """Purchase conversion rate for each cohort month, deterministic per month."""
-    keys = [str(month) for month in months]
-    draws = _uniforms(keys, salt="conversion-rate")[:, 0]
-    low, high = CONVERSION_RATE_RANGE
-    return pd.Series(low + draws * (high - low), index=months, name="conversion_rate")
+    """
+    Purchase conversion rate for each cohort month.
+
+    Deterministic and structured: level + trend + seasonality + small jitter.
+    This is *lifetime* conversion -- the share of the cohort that ever orders.
+    The dashboard's 90-day rate is a fraction of it, because the widened
+    LAG_BUCKETS leave some purchasers converting after day 90.
+    """
+    elapsed_months = np.array(
+        [(pd.Period(month, freq="M") - CONVERSION_EPOCH).n for month in months],
+        dtype=np.float64,
+    )
+    trend = CONVERSION_TREND_PER_YEAR * elapsed_months / 12.0
+
+    calendar_month = np.array([pd.Period(month, freq="M").month for month in months])
+    # Cosine, not sine: cosine is at its maximum where its argument is zero,
+    # which puts the peak on CONVERSION_SEASONAL_PEAK_MONTH itself. A sine
+    # would peak a quarter of a year later than the constant claims.
+    seasonal = CONVERSION_SEASONAL_AMPLITUDE * np.cos(
+        2 * np.pi * (calendar_month - CONVERSION_SEASONAL_PEAK_MONTH) / 12.0
+    )
+
+    draws = _uniforms([str(month) for month in months], salt="conversion-rate")[:, 0]
+    jitter = (draws - 0.5) * CONVERSION_JITTER
+
+    rates = CONVERSION_BASE + trend + seasonal + jitter
+    low, high = CONVERSION_BOUNDS
+    return pd.Series(
+        np.clip(rates, low, high), index=months, name="conversion_rate"
+    )
 
 
 def _synthetic_user_id(month: str, index: int) -> str:

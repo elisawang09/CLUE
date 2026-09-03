@@ -3,9 +3,13 @@ registry.py
 -----------
 What each metric is called, what it means, and how it is calculated.
 
-Names follow the observation-window filter, so a 9-month window really does say
-"9-Month Customer Value" everywhere rather than displaying a stale "6-Month"
-label over different numbers.
+Names carry the observation window, which is fixed at 90 days, so every
+window-dependent metric reads "90-Day ..." and none of them can drift from the
+number underneath.
+
+Values describe the *latest acquisition month* in the reference period -- the
+cohort the KPI cards report -- so a definition opened from a card explains the
+number on that card.
 
 Calculation expressions are stored as tokens rather than prose so the panel can
 render referenced metrics as links, letting someone step into a component
@@ -93,9 +97,9 @@ _register(
         id="customer_value",
         name=lambda m: f"{m.window_label} Customer Value",
         description=lambda m: (
-            f"Average value generated per acquired user during the first "
-            f"{m.cohort.window} months after acquisition. Every user acquired in "
-            f"the reference period counts toward the average, including those who "
+            f"Average value generated per acquired user during their first "
+            f"{m.window_days} days after acquisition. Every user acquired in "
+            f"{m.latest.label} counts toward the average, including those who "
             f"never placed an order."
         ),
         expression=lambda m: [
@@ -128,7 +132,8 @@ _register(
         name=lambda m: f"{m.window_label} Purchase Conversion Rate",
         description=lambda m: (
             f"Percentage of acquired users who place at least one order during "
-            f"their first {m.cohort.window} months after acquisition."
+            f"their first {m.window_days} days after acquisition. Users who "
+            f"first order later than that are not counted."
         ),
         expression=lambda m: [
             Token("Purchasing Customers", "purchasing_customers"),
@@ -148,8 +153,8 @@ _register(
         name=lambda m: "Orders per Purchasing Customer",
         description=lambda m: (
             f"Average number of orders placed by a customer who ordered at least "
-            f"once in their first {m.cohort.window} months. Users who never "
-            f"ordered are excluded from this average."
+            f"once in their first {m.window_days} days. Users who never ordered "
+            f"in that window are excluded from this average."
         ),
         expression=lambda m: [
             Token("Total Orders", "total_orders"),
@@ -188,12 +193,13 @@ _register(
         id="acquired_users",
         name=lambda m: "Acquired Users",
         description=lambda m: (
-            "Number of users whose account was created during the reference "
-            "acquisition period, whether or not they went on to order."
+            f"Number of users whose account was created in {m.latest.label}, "
+            f"whether or not they went on to order. This is the most recent "
+            f"acquisition month in the reference period."
         ),
         expression=lambda m: [
-            Token("COUNT(DISTINCT user_id) where acquisition date falls in "),
-            Token(m.cohort.label),
+            Token("COUNT(DISTINCT user_id) where acquisition month is "),
+            Token(m.latest.label),
         ],
         value=lambda m: m.acquired_users,
         fmt=count,
@@ -212,12 +218,12 @@ _register(
         name=lambda m: "Purchasing Customers",
         description=lambda m: (
             f"Acquired users who placed at least one order within their first "
-            f"{m.cohort.window} months."
+            f"{m.window_days} days."
         ),
         expression=lambda m: [
             Token(
                 f"COUNT(DISTINCT user_id) with ≥1 order in their first "
-                f"{m.cohort.window} months"
+                f"{m.window_days} days"
             )
         ],
         value=lambda m: m.purchasing_customers,
@@ -231,8 +237,8 @@ _register(
         id="total_orders",
         name=lambda m: "Total Orders",
         description=lambda m: (
-            f"Orders placed by users acquired in the reference period, counting "
-            f"only orders within each user's first {m.cohort.window} months."
+            f"Orders placed by users acquired in {m.latest.label}, counting only "
+            f"orders within each user's first {m.window_days} days."
         ),
         expression=lambda m: [Token("COUNT(DISTINCT order_id) for qualifying orders")],
         value=lambda m: m.total_orders,

@@ -17,6 +17,14 @@ SERIES = "#2a78d6"          # the one accent; both charts are single-series
 SERIES_MUTED = "#a9c8ee"    # same hue, de-emphasised (never a second hue)
 SERIES_DARK = "#1c5aa6"
 
+# The one place a second and third hue are allowed. A period-over-period delta
+# has a direction, and direction is the whole point of showing it -- an arrow
+# in the accent blue would read as decoration rather than as up or down. Both
+# are dark enough to clear WCAG AA on the card surface, and the arrow glyph
+# carries the same information as the colour so it does not depend on it.
+POSITIVE = "#1B7F4B"
+NEGATIVE = "#B3261E"
+
 PAGE_BG = "#F7F9FC"
 SURFACE = "#FFFFFF"
 BORDER = "#E3E8EF"
@@ -92,6 +100,19 @@ def inject_styles() -> None:
             text-decoration: underline dotted;
             text-underline-offset: 3px;
         }}
+        /* The acquisition month the value describes. Sits above the value
+           rather than below it, so the card reads "which cohort, then what it
+           was worth" in one pass. */
+        .bd-kpi-month {{
+            font-family: {FONT};
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: {TEXT_MUTED};
+            margin: 0 0 0.15rem 0;
+            min-height: 1.1em;
+        }}
         .bd-kpi-value {{
             font-family: {FONT};
             font-size: 1.9rem;
@@ -109,6 +130,24 @@ def inject_styles() -> None:
             color: {TEXT_SECONDARY};
             margin-top: 0.25rem;
             min-height: 1.2em;
+        }}
+        /* Change against the previous acquisition month. Reserved even when
+           there is no previous month, so the first cohort in the data does not
+           render a shorter card than every other. */
+        .bd-kpi-delta {{
+            font-family: {FONT};
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-top: 0.3rem;
+            min-height: 1.2em;
+            line-height: 1.2;
+        }}
+        .bd-kpi-delta.is-up {{ color: {POSITIVE}; }}
+        .bd-kpi-delta.is-down {{ color: {NEGATIVE}; }}
+        .bd-kpi-delta.is-flat {{ color: {TEXT_MUTED}; }}
+        .bd-kpi-delta .bd-delta-context {{
+            color: {TEXT_MUTED};
+            font-weight: 400;
         }}
 
         /* Section + chart headings ------------------------------------------ */

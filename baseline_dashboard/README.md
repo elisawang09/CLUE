@@ -100,9 +100,8 @@ Every interaction appends a JSON line to `logs/events-YYYY-MM-DD.jsonl`
  "metric": "customer_value", "source": "card_menu"}
 ```
 
-Actions logged: `session_start`, `filter_period`, `filter_window`,
-`open_details`, `open_underlying`, `metric_drill`, `underlying_grain`,
-`chart_select`, `csv_export`.
+Actions logged: `session_start`, `filter_period`, `open_underlying`,
+`underlying_grain`, `chart_select`.
 
 Only real interactions are recorded — Streamlit re-runs the whole script on
 every widget change, so anything logged on the render path would produce
@@ -118,55 +117,68 @@ than as a dead link.
 
 ## The metric
 
-**6-Month Customer Value** — average value generated per acquired user during
-the first 6 months after acquisition.
+**90-Day Customer Value** — average value generated per acquired user during
+their first 90 days after acquisition.
 
 ```
-6-Month Customer Value
-  = 6-Month Purchase Conversion Rate
+90-Day Customer Value
+  = 90-Day Purchase Conversion Rate
   × Orders per Purchasing Customer
   × Average Order Value
 
   = Total Gross Order Value ÷ Acquired Users
 ```
 
-Two filters, answering different questions:
+One filter: **Reference Acquisition Period**, which decides *which* users are
+included (default Jan–Jun 2024, the most recent year in the data; July is a
+3-user stub month and is left out of the default). How long each is observed is no longer a
+control — the window is fixed at 90 days from each user's **own** acquisition
+date.
 
-- **Reference Acquisition Period** — *which* users are included (default Jan–Mar 2022)
-- **Observation Window** — *how long* each is observed after their **own**
-  acquisition date (3/6/9/12 months, default 6)
+That per-user anchoring matters more than it looks. Orders are never filtered by
+calendar date; a user acquired on 20 February is observed from 20 February.
+Filtering orders by the reference period instead would give later-acquired users
+a shorter window and quietly understate the metric.
 
-The second matters more than it looks. Orders are never filtered by calendar
-date; a user acquired on 20 February is observed from 20 February. Filtering
-orders by the reference period instead would give later-acquired users a shorter
-window and quietly understate the metric.
+`customer_age_day` is the derivation everything is filtered on: day 0 is the
+acquisition day, so the first 90 days are offsets 0–89. It is date-granular, so
+the boundary falls at midnight rather than at the acquisition time of day.
 
-`customer_age_month` is therefore anniversary-based: month *k* covers
-`[acquisition + (k−1) months, acquisition + k months)`, clamped at month ends the
-same way `pd.DateOffset` clamps.
-
-Four consistency checks run at load and after every filter change. If the
-headline ever disagrees with its components or with the charts, the dashboard
-says so in a banner rather than showing a plausible wrong number.
+Consistency checks run at load and after every filter change, covering both the
+headline against its own factors and every charted month against the same two
+identities. If they ever disagree, the dashboard says so in a banner rather than
+showing a plausible wrong number.
 
 ## Layout
 
 ```
 Customer Value Dashboard · E-commerce Growth Overview
-[Reference Acquisition Period]  [Observation Window]
+[Reference Acquisition Period]
 
-6-Month Customer Value | Conversion Rate | Orders/Purchasing Customer | AOV | Acquired Users
+90-Day Customer Value | Conversion Rate | Orders/Purchasing Customer | AOV | Acquired Users
+     each naming its acquisition month, with ▲/▼ change vs the month before
 
-[ Customer Value in the First 6 Months ]  [ Monthly Value Contribution ]
+[ 90-Day Customer Value      ]  [ 90-Day Purchase Conversion Rate ]
+[   by Acquisition Month     ]  [   by Acquisition Month          ]
 ```
 
-Both charts are drawn from a single monthly series, so the cumulative line is
-always the running sum of the contribution bars. Month 6 of the line equals the
-headline; the bars sum to it.
+**Cards report one month; charts report the range.** The cards show the *most
+recent acquisition month* in the reference period — with Jan–Jun 2024 selected,
+they describe Jun 2024 — and each card names that month above its value. View
+Underlying Data follows the same month, so a participant checking the number by
+hand reconciles against the cohort the card actually describes.
 
-Cards carry no sparklines or deltas: the metric describes one acquisition cohort
-observed over its own first months, so a calendar-time sparkline would imply a
-trend the number does not have.
+The comparison is against the month immediately preceding **in the data**, not
+in the selection, so narrowing the filter to a single month still shows a
+change. The earliest cohort in the data has no previous month and renders no
+delta rather than a fabricated zero.
+
+Both charts are vertical column charts over acquisition months, drawn from the
+same per-month table the cards read, so a bar and a card cannot disagree about
+the same month. The month the cards report is drawn in the accent colour and the
+rest are muted — that emphasis is the only thing connecting the cards to the
+bars. Past 12 months in range, per-bar labels are dropped and axis labels angle,
+because the period can span the whole dataset.
 
 ## Data
 
@@ -196,15 +208,30 @@ documented in `data/modeled/SYNTHESIZED.md`:
    reads as current. Exactly 200 weeks, so every order keeps its day of week —
    this business has a strong weekly rhythm. Subtract 1400 days to recover
    original dates.
-2. **`account_created_at`** = first order − a signup lag drawn from four 15-day
-   buckets at 0.30 / 0.30 / 0.25 / 0.15.
+2. **`account_created_at`** = first order − a signup lag drawn from seven
+   buckets spanning 0–269 days. The tail past day 90 is deliberate and carries
+   15% of purchasers: with every purchaser converting inside the window, the
+   90-day observation window would exclude nobody and 90-day conversion would be
+   lifetime conversion under another name.
 3. **Non-purchasing acquired users.** Every customer in the raw data has orders,
    so conversion would be exactly 100% for every cohort and the headline would
-   collapse to Orders × AOV. Signup-only users were generated per cohort month at
-   a conversion rate drawn in 30–50%, making the 3,102 real purchasers ~40% of
-   7,779 acquired users.
+   collapse to Orders × AOV. Signup-only users are generated per cohort month
+   against a target conversion rate that is a *function of the month* — level,
+   secular trend, annual seasonal term peaking in November, small jitter. An
+   earlier version drew each month independently in a fixed range, which made
+   the per-cohort-month conversion chart pure noise: with one bar per month
+   there was no shape to read because there was none to find.
 
 Orders, order lines, prices and supply costs are all real.
+
+### Incomplete cohort months, excluded
+
+Acquisition months earlier than the first observed order are dropped at build
+time. Signup is derived by subtracting a lag from the first order, so those
+months can only ever contain long-lag purchasers — a biased sample missing every
+fast converter, whose 90-day conversion collapses toward zero for reasons that
+have nothing to do with the business. This removes 9 months and ~5% of users,
+and leaves 49 clean acquisition months from 2020-07 to 2024-07.
 
 ## Why the build step exists
 
@@ -214,15 +241,23 @@ filters are interactive.
 
 So: **precompute the shape, compute the ratios on demand.**
 
-- **Build once** → five Parquet files in `data/modeled/`.
+- **Build once** → six Parquet files in `data/modeled/`.
 - **Two small tables** serve every KPI and both charts: `customers.parquet`
-  (7,779 rows) and `customer_age_facts.parquet` (34,515 rows). Aggregating ~42 K
-  rows is milliseconds, for any filter combination.
+  (7,137 rows) and `customer_window_facts.parquet` (2,527 rows, one per user who
+  ordered inside their own 90 days). Aggregating ~10 K rows is milliseconds, for
+  any filter.
+- `customer_age_facts.parquet` is still built but no longer read by the
+  dashboard — 90 days is not three anniversary months, so a month-grain table
+  cannot express the window. CLUE reads it directly, which is why it stays.
 - **`@st.cache_data`** on the loaders and the filtered aggregate.
 
 The 2 M-row `orders` and 3 M-row `order_items` tables are touched *only* by the
 order-level underlying-data view, filtered and paginated, and only when someone
 opens it.
+
+The card menu holds View Underlying Data (and, in the CLUE condition, Open in
+CLUE). The Metric Details / calculation drill-down panel and the CSV export were
+both removed; the underlying tables are read on screen and not taken away.
 
 ## Files
 
@@ -234,18 +269,17 @@ study/
   make_sessions.py           counterbalanced link generator
   events.py                  interaction logging
 datasource/
-  age.py                     time shift + customer_age_month
+  age.py                     time shift + customer_age_month/_days
   synthesize.py              signup lag, non-purchasing users
   build.py                   raw CSV → modeled parquet
   schema.py                  expected columns + readable errors
   loader.py                  cached parquet readers
 metrics/
   registry.py                names, descriptions, expression tokens, formats
-  compute.py                 (period, window) → KPIs + both chart series
+  compute.py                 period → per-month table, KPIs, both charts
   checks.py                  the four consistency assertions
 components/
   styles.py header.py filters.py kpi_cards.py charts.py
-  metric_details.py          dialog + component drill navigation
   underlying_data.py         Summary / Underlying rows + CSV export
 tests/                       128 unittest tests
 ```
@@ -267,7 +301,7 @@ tests/                       128 unittest tests
 ## Known gap
 
 CLUE is still built around **PLTV** (`Probability of Active × Expected # Orders ×
-Expected Order Value`), whose components differ from this dashboard's 6-Month
+Expected Order Value`), whose components differ from this dashboard's 90-Day
 Customer Value. A participant following the link lands on a related but not
 identical metric. Realigning it means rewriting `demo/data/graph_data.py`'s
 nodes, simulation deltas, and transformation flows — worth doing before the

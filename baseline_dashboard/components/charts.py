@@ -1,15 +1,17 @@
 """
 charts.py
 ---------
-The two charts, both on the months-since-acquisition axis.
+The two charts, both on the acquisition-month axis.
 
 They are drawn from one tidy frame produced by `metrics.compute.chart_frame`,
-so the cumulative line is always the running sum of the contribution bars --
-the relationship the spec requires, enforced by construction rather than by
-two parallel calculations agreeing.
+which is the same per-month table the KPI cards read. A bar and a card
+reporting the same month therefore cannot disagree -- the relationship is
+enforced by construction rather than by two calculations happening to agree.
 
 Each is a single series, so neither carries a legend: the title names the one
-thing plotted. Clicking a mark selects that month and scopes the
+thing plotted. The month the cards report is drawn in the accent colour and
+every other month is muted, which is the only thing on screen connecting the
+cards to the bars. Clicking a bar selects that acquisition month and scopes the
 underlying-data view to it.
 """
 
@@ -24,7 +26,6 @@ from components.styles import (
     SERIES,
     SERIES_MUTED,
     TEXT_MUTED,
-    TEXT_PRIMARY,
     TEXT_SECONDARY,
 )
 from metrics.compute import CohortMetrics, chart_frame
@@ -35,6 +36,12 @@ CHART_HEIGHT = 300
 # title and (two-line) subtitle, plus container padding. Fixed so both panels
 # stay level regardless of how each subtitle wraps.
 CHART_PANEL_HEIGHT = 425
+
+# Above this many months, per-bar value labels collide and the axis labels stop
+# fitting horizontally. The reference period can span the whole dataset, so
+# both have to degrade rather than overlap.
+MAX_LABELLED_MONTHS = 12
+MAX_HORIZONTAL_AXIS_MONTHS = 12
 
 
 def _heading(title: str, subtitle: str) -> None:
@@ -66,20 +73,25 @@ def _configure(chart: alt.Chart) -> alt.Chart:
     )
 
 
-def _x_axis() -> alt.X:
+def _x_axis(frame: pd.DataFrame) -> alt.X:
+    """Acquisition month, oldest to newest, angled once the labels stop fitting."""
+    angle = 0 if len(frame) <= MAX_HORIZONTAL_AXIS_MONTHS else -45
     return alt.X(
         "month_label:N",
-        sort=alt.SortField("customer_age_month"),
-        title="Months since acquisition",
-        axis=alt.Axis(labelAngle=0, grid=False),
+        sort=alt.SortField("sort_key"),
+        title="User Acquisition Month",
+        axis=alt.Axis(labelAngle=angle, grid=False),
+        scale=alt.Scale(paddingInner=0.25, paddingOuter=0.15),
     )
 
 
-def _tooltip() -> list[alt.Tooltip]:
+def _tooltip(value_field: str, value_title: str, value_format: str) -> list[alt.Tooltip]:
     return [
-        alt.Tooltip("month_label:N", title="Customer age"),
-        alt.Tooltip("monthly_contribution:Q", title="This month", format="$,.2f"),
-        alt.Tooltip("cumulative_value:Q", title="Cumulative", format="$,.2f"),
+        alt.Tooltip("month_label:N", title="User Acquisition Month"),
+        alt.Tooltip(f"{value_field}:Q", title=value_title, format=value_format),
+        alt.Tooltip("acquired_users:Q", title="Acquired users", format=","),
+        alt.Tooltip("purchasing_customers:Q", title="Purchasing customers",
+                    format=","),
     ]
 
 
@@ -92,130 +104,150 @@ def _empty_state(message: str) -> None:
     )
 
 
-def _selected_month(key: str) -> int | None:
-    """Read the age month a participant clicked, if any."""
+def _selected_month(key: str) -> str | None:
+    """Read the acquisition month a participant clicked, if any."""
     event = st.session_state.get(key)
     if not event:
         return None
     rows = (event.get("selection") or {}).get("pick") or []
     if not rows:
         return None
-    return int(rows[0]["customer_age_month"])
+    return str(rows[0]["month_label"])
 
 
-# ---------------------------------------------------------------------------
-# Chart 1 -- cumulative
-# ---------------------------------------------------------------------------
+def _column_chart(
+    metrics: CohortMetrics,
+    key: str,
+    value_field: str,
+    value_title: str,
+    axis_format: str,
+    label_format: str,
+    tooltip_title: str,
+) -> str | None:
+    """
+    One vertical column chart over acquisition months.
 
-def render_cumulative_chart(metrics: CohortMetrics) -> int | None:
-    _heading(
-        f"Customer Value in the First {metrics.cohort.window} Months",
-        "Average cumulative value per acquired user",
-    )
-
-    if not metrics.acquired_users:
-        _empty_state("No users were acquired in this reference period.")
-        return None
-
+    Both charts differ only in which column they plot and how it is formatted,
+    so they share this body rather than duplicating the encoding twice and
+    drifting apart.
+    """
     frame = chart_frame(metrics)
     picker = alt.selection_point(
-        fields=["customer_age_month"], on="click", empty=True, name="pick"
+        fields=["month_label"], on="click", empty=True, name="pick"
     )
 
     base = alt.Chart(frame).encode(
-        x=_x_axis(),
+        x=_x_axis(frame),
         y=alt.Y(
-            "cumulative_value:Q",
-            title="Cumulative value per acquired user",
-            axis=alt.Axis(format="$,.0f", tickCount=6),
+            f"{value_field}:Q",
+            title=value_title,
+            axis=alt.Axis(format=axis_format, tickCount=6),
             scale=alt.Scale(nice=True, zero=True),
         ),
     )
 
-    line = base.mark_line(color=SERIES, strokeWidth=2)
-    points = base.mark_point(
-        filled=True, size=95, color=SERIES, stroke="#FFFFFF", strokeWidth=2
-    ).encode(
-        opacity=alt.condition(picker, alt.value(1.0), alt.value(0.35)),
-        tooltip=_tooltip(),
-    ).add_params(picker)
-
-    # Only the final point is labelled -- it is the headline number, and
-    # labelling every point would clutter a line that is already monotonic.
-    final = (
-        alt.Chart(frame.tail(1))
-        .mark_text(dy=-16, fontWeight="bold", fontSize=13, color=TEXT_PRIMARY)
-        .encode(x=_x_axis(), y="cumulative_value:Q",
-                text=alt.Text("cumulative_value:Q", format="$,.2f"))
-    )
-
-    st.altair_chart(
-        _configure(line + points + final),
-        width="stretch",
-        on_select="rerun",
-        key="chart_cumulative",
-    )
-    return _selected_month("chart_cumulative")
-
-
-# ---------------------------------------------------------------------------
-# Chart 2 -- monthly contribution
-# ---------------------------------------------------------------------------
-
-def render_contribution_chart(metrics: CohortMetrics) -> int | None:
-    _heading(
-        "Monthly Value Contribution",
-        "Average additional value generated per acquired user in each month "
-        "after acquisition",
-    )
-
-    if not metrics.acquired_users:
-        _empty_state("No users were acquired in this reference period.")
-        return None
-
-    frame = chart_frame(metrics)
-    picker = alt.selection_point(
-        fields=["customer_age_month"], on="click", empty=True, name="pick"
-    )
-
-    base = alt.Chart(frame).encode(
-        x=_x_axis().scale(alt.Scale(paddingInner=0.3, paddingOuter=0.2)),
-        y=alt.Y(
-            "monthly_contribution:Q",
-            title="Value per acquired user",
-            axis=alt.Axis(format="$,.0f", tickCount=6),
-            scale=alt.Scale(nice=True, zero=True),
-        ),
-    )
-
+    # The month the KPI cards report is the one in full colour. A click
+    # overrides that emphasis, so the selection is always visible too.
     bars = base.mark_bar(
-        cornerRadiusTopLeft=4, cornerRadiusTopRight=4, color=SERIES
+        cornerRadiusTopLeft=4, cornerRadiusTopRight=4
     ).encode(
-        color=alt.condition(picker, alt.value(SERIES), alt.value(SERIES_MUTED)),
-        tooltip=_tooltip(),
+        # Emphasis is a scale over `is_latest` rather than a nested condition:
+        # Altair rejects a condition inside a condition, and a two-point scale
+        # says the same thing. Clicking mutes everything the click excluded.
+        color=alt.condition(
+            picker,
+            alt.Color(
+                "is_latest:N",
+                scale=alt.Scale(
+                    domain=[False, True], range=[SERIES_MUTED, SERIES]
+                ),
+                legend=None,
+            ),
+            alt.value(SERIES_MUTED),
+        ),
+        tooltip=_tooltip(value_field, tooltip_title, label_format),
     ).add_params(picker)
 
-    # Every bar is labelled: there are at most 12, and the study task asks
-    # participants to check that these sum to the headline by hand.
-    labels = base.mark_text(dy=-9, fontSize=11, color=TEXT_SECONDARY).encode(
-        text=alt.Text("monthly_contribution:Q", format="$,.2f")
-    )
+    layers = bars
+    if len(frame) <= MAX_LABELLED_MONTHS:
+        layers = bars + base.mark_text(
+            dy=-9, fontSize=11, color=TEXT_SECONDARY
+        ).encode(text=alt.Text(f"{value_field}:Q", format=label_format))
 
     st.altair_chart(
-        _configure(bars + labels),
-        width="stretch",
-        on_select="rerun",
-        key="chart_contribution",
+        _configure(layers), width="stretch", on_select="rerun", key=key
     )
-    return _selected_month("chart_contribution")
+    return _selected_month(key)
 
 
-def month_summary(metrics: CohortMetrics, age_month: int) -> pd.DataFrame:
-    """Summary row for a selected chart month (spec's per-month drilldown)."""
+# ---------------------------------------------------------------------------
+# Chart 1 -- customer value by acquisition month
+# ---------------------------------------------------------------------------
+
+def render_customer_value_chart(metrics: CohortMetrics) -> str | None:
+    _heading(
+        f"{metrics.window_label} Customer Value by Acquisition Month",
+        "Average value per acquired user in their first "
+        f"{metrics.window_days} days, one column per acquisition month",
+    )
+
+    if metrics.by_month.empty:
+        _empty_state("No users were acquired in this reference period.")
+        return None
+
+    return _column_chart(
+        metrics,
+        key="chart_customer_value",
+        value_field="customer_value",
+        value_title="Value per acquired user",
+        axis_format="$,.0f",
+        label_format="$,.2f",
+        tooltip_title=f"{metrics.window_label} Customer Value",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Chart 2 -- purchase conversion rate by acquisition month
+# ---------------------------------------------------------------------------
+
+def render_conversion_chart(metrics: CohortMetrics) -> str | None:
+    _heading(
+        f"{metrics.window_label} Purchase Conversion Rate by Acquisition Month",
+        "Share of each month's acquired users who ordered within their first "
+        f"{metrics.window_days} days",
+    )
+
+    if metrics.by_month.empty:
+        _empty_state("No users were acquired in this reference period.")
+        return None
+
+    return _column_chart(
+        metrics,
+        key="chart_conversion",
+        value_field="conversion_rate",
+        value_title="Share of acquired users",
+        axis_format=".0%",
+        label_format=".1%",
+        tooltip_title=f"{metrics.window_label} Conversion Rate",
+    )
+
+
+def month_summary(metrics: CohortMetrics, month_label: str) -> pd.DataFrame:
+    """Summary row for a selected acquisition month, at the charts' own grain."""
+    frame = chart_frame(metrics)
+    row = frame[frame.month_label == month_label]
+    if row.empty:
+        return pd.DataFrame()
+
+    row = row.iloc[0]
     return pd.DataFrame(
         {
-            "Customer Age": [f"Month {age_month}"],
-            "Monthly Contribution": [metrics.monthly_contribution[age_month]],
-            "Cumulative Value": [metrics.cumulative_value[age_month]],
+            "Acquisition Month": [month_label],
+            "Acquired Users": [int(row.acquired_users)],
+            "Purchasing Customers": [int(row.purchasing_customers)],
+            f"{metrics.window_label} Purchase Conversion Rate": [
+                float(row.conversion_rate)
+            ],
+            f"{metrics.window_label} Customer Value": [float(row.customer_value)],
         }
     )

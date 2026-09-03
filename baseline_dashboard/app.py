@@ -15,19 +15,22 @@ import streamlit as st
 
 from components.charts import (
     CHART_PANEL_HEIGHT,
-    render_contribution_chart,
-    render_cumulative_chart,
+    render_conversion_chart,
+    render_customer_value_chart,
 )
 from components.filters import render_filters
 from components.header import render_header
 from components.kpi_cards import render_kpi_cards
-from components.metric_details import render_metric_details
 from components.styles import highlight_selected_card, inject_styles
 from components.underlying_data import render_underlying_data
-from datasource.loader import available_months, load_age_facts, load_customers
+from datasource.loader import (
+    available_months,
+    load_customers,
+    load_window_facts,
+)
 from datasource.schema import DataSourceError
 from metrics.checks import run_checks
-from metrics.compute import compute
+from metrics.compute import WINDOW_DAYS, compute
 from study.events import log_event, log_if_changed, log_session_start
 from study.session import resolve_session
 
@@ -36,7 +39,7 @@ def _init_state() -> None:
     defaults = {
         "selected_metric": None,   # which KPI card is outlined
         "metric_nav": [],          # drill path through metric definitions
-        "selected_month": None,    # age month clicked on a chart
+        "selected_cohort_month": None,  # acquisition month clicked on a chart
         "open_panel": None,        # "details" | "underlying" | None
         "underlying_tab": "summary",
     }
@@ -85,7 +88,7 @@ def main() -> None:
 
     try:
         customers = load_customers()
-        age_facts = load_age_facts()
+        window_facts = load_window_facts()
         months = available_months()
     except DataSourceError as error:
         st.error(str(error))
@@ -94,11 +97,10 @@ def main() -> None:
 
     render_header()
     cohort = render_filters(months)
-    metrics = compute(customers, age_facts, cohort)
+    metrics = compute(customers, window_facts, cohort)
     _report_checks(metrics)
 
     log_if_changed("filter_period", "_logged_period", cohort.label, session)
-    log_if_changed("filter_window", "_logged_window", cohort.window, session)
 
     highlight_selected_card(st.session_state.selected_metric)
     metric_id, action = render_kpi_cards(
@@ -112,25 +114,24 @@ def main() -> None:
     left, right = st.columns(2, gap="medium")
     with left, st.container(border=True, height=CHART_PANEL_HEIGHT,
                             key="chart_left"):
-        picked_left = render_cumulative_chart(metrics)
+        picked_left = render_customer_value_chart(metrics)
     with right, st.container(border=True, height=CHART_PANEL_HEIGHT,
                              key="chart_right"):
-        picked_right = render_contribution_chart(metrics)
+        picked_right = render_conversion_chart(metrics)
 
     picked = picked_left if picked_left is not None else picked_right
-    if picked != st.session_state.selected_month:
-        st.session_state.selected_month = picked
+    if picked != st.session_state.selected_cohort_month:
+        st.session_state.selected_cohort_month = picked
         if picked is not None:
-            log_event("chart_select", session, age_month=picked)
+            log_event("chart_select", session, acquisition_month=picked)
 
-    if st.session_state.open_panel == "details":
-        render_metric_details(metrics)
-    elif st.session_state.open_panel == "underlying":
+    if st.session_state.open_panel == "underlying":
         render_underlying_data(metrics)
 
     st.caption(
-        f"Customer Analytics Model · {metrics.acquired_users:,} users acquired "
-        f"{cohort.label}, each observed for their own first {cohort.window} months."
+        f"Customer Analytics Model · cards show {metrics.acquired_users:,} users "
+        f"acquired {metrics.latest.label}, the most recent month in "
+        f"{cohort.label}; each is observed for their own first {WINDOW_DAYS} days."
     )
 
 

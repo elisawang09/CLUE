@@ -14,6 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from datasource.schema import TABLES, require_built, validate
+from metrics.compute import WINDOW_DAYS
 
 
 @st.cache_data(show_spinner=False)
@@ -38,8 +39,26 @@ def load_customers() -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def load_age_facts() -> pd.DataFrame:
-    """Per-user, per-age-month orders and gross value."""
+    """
+    Per-user, per-age-month orders and gross value.
+
+    The dashboard no longer slices by age month, so nothing here reads this.
+    It is kept because CLUE reads the same table directly.
+    """
     return _read("customer_age_facts")
+
+
+@st.cache_data(show_spinner=False)
+def load_window_facts() -> pd.DataFrame:
+    """
+    Per-user totals over their own first 90 days -- the table every KPI is
+    computed from.
+
+    One row per user who ordered inside their window, so users who never
+    ordered are absent rather than present with zeros; callers join it onto
+    `customers` and fill.
+    """
+    return _read("customer_window_facts")
 
 
 @st.cache_data(show_spinner=False)
@@ -48,10 +67,9 @@ def load_products() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_orders(user_ids: tuple[str, ...], max_age_month: int) -> pd.DataFrame:
+def load_orders(user_ids: tuple[str, ...]) -> pd.DataFrame:
     """
-    Orders for a specific set of users, within their first `max_age_month`
-    months.
+    Orders for a specific set of users, within their own first 90 days.
 
     Keyed on the user set so each distinct drilldown is cached separately.
     Reads the 2M-row table, so it is only called from the underlying-data view.
@@ -59,11 +77,11 @@ def load_orders(user_ids: tuple[str, ...], max_age_month: int) -> pd.DataFrame:
     orders = _read(
         "orders",
         columns=("order_id", "user_id", "ordered_at", "revenue", "cost",
-                 "gross_value", "customer_age_month"),
+                 "gross_value", "customer_age_day"),
     )
     return orders[
         orders.user_id.isin(set(user_ids))
-        & orders.customer_age_month.between(1, max_age_month)
+        & orders.customer_age_day.between(0, WINDOW_DAYS - 1)
     ].copy()
 
 

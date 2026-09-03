@@ -1,23 +1,26 @@
 """
 filters.py
 ----------
-The dashboard's two filters.
+The dashboard's one filter: the reference acquisition period.
 
-They answer different questions and are deliberately separate controls:
-the reference acquisition period decides *which users are included*, and the
-observation window decides *how long each one is watched after their own
-acquisition date*.
+It decides *which users are included*. How long each one is watched is no
+longer a control -- the observation window is fixed at 90 days from each user's
+own acquisition date, so the metric names never drift from the numbers.
 """
 
 import pandas as pd
 import streamlit as st
 
-from metrics.compute import DEFAULT_WINDOW, WINDOW_CHOICES, CohortFilter
+from metrics.compute import WINDOW_DAYS, CohortFilter
 
-# Chosen from the build's cohort report: the largest 3-month acquisition window
-# in the data, so every KPI opens on a well-populated cohort.
-DEFAULT_START = pd.Period("2022-01", freq="M")
-DEFAULT_END = pd.Period("2022-03", freq="M")
+# The most recent year in the data, stopping at June.
+#
+# Acquisitions run to 2024-07, but that month is a 3-user stub at the edge of
+# the data -- and the cards report the *latest* month in the range, so opening
+# on it would rest the whole headline on a single purchaser. June is the last
+# month with a cohort big enough to read.
+DEFAULT_START = pd.Period("2024-01", freq="M")
+DEFAULT_END = pd.Period("2024-06", freq="M")
 
 
 def _index_of(months: pd.PeriodIndex, target: pd.Period, fallback: int) -> int:
@@ -30,7 +33,7 @@ def render_filters(months: pd.PeriodIndex) -> CohortFilter:
     labels = [month.strftime("%b %Y") for month in months]
 
     with st.container(border=True, key="filter_bar"):
-        left, right, spacer = st.columns([2.4, 1.3, 2.3])
+        left, spacer = st.columns([2.4, 3.6])
 
         with left:
             st.markdown(
@@ -53,28 +56,16 @@ def render_filters(months: pd.PeriodIndex) -> CohortFilter:
                 key="filter_end",
             )
 
-        with right:
-            st.markdown(
-                '<p class="bd-kpi-label">Observation Window</p>',
-                unsafe_allow_html=True,
-            )
-            window = st.selectbox(
-                "Months after acquisition",
-                WINDOW_CHOICES,
-                index=WINDOW_CHOICES.index(DEFAULT_WINDOW),
-                format_func=lambda w: f"First {w} months",
-                key="filter_window",
-            )
-
         with spacer:
             st.markdown(
                 '<p class="bd-kpi-label">&nbsp;</p>',
                 unsafe_allow_html=True,
             )
             st.caption(
-                "Users are included by acquisition date. Each is then observed "
-                f"for their own first {window} months, so everyone in the cohort "
-                "gets an equal-length window."
+                "Users are included by acquisition date, then observed for "
+                f"their own first {WINDOW_DAYS} days, so everyone gets an "
+                "equal-length window. Cards show the most recent acquisition "
+                "month in the range; charts show every month in it."
             )
 
     if start_i > end_i:
@@ -84,4 +75,4 @@ def render_filters(months: pd.PeriodIndex) -> CohortFilter:
         )
         start_i, end_i = end_i, start_i
 
-    return CohortFilter(months[start_i], months[end_i], window=window)
+    return CohortFilter(months[start_i], months[end_i])
