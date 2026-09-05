@@ -1,13 +1,35 @@
 import streamlit as st
-from .styles import get_detail_box_html
+from .styles import (
+    result_block_html,
+    scenario_hint_html,
+    scenario_rail_css,
+    scenario_row_html,
+    scenario_strip_head_html,
+    scenario_strip_stats_html,
+)
 from .top_view import PRIMARY_METRIC, render_top_view
 from .simulation_result_graph import render_simulation_graph
-from data.metrics import count, decimal, load_baseline, money, percent, whole_money
-from data.scenario import Scenario, combine, goal_value, starters
+from data.metrics import (
+    count,
+    decimal,
+    load_baseline,
+    md,
+    money,
+    percent,
+    whole_money,
+)
+from data.scenario import (
+    Scenario,
+    from_baseline,
+    from_observed_best,
+    goal_value,
+)
 from data.graph_data import simulation_deltas
 from utils.graph_styles import legend_style_html
 from utils.tooltip_overlay import inject_tooltip_overlay
 from utils.slider_calculations import (
+    CURRENT_CARD_ID,
+    MAX_RAIL_CARDS,
     CONVERSION_KEY,
     ORDERS_KEY,
     ORDER_VALUE_KEY,
@@ -16,8 +38,15 @@ from utils.slider_calculations import (
     UPLIFT_MAX,
     UPLIFT_MIN,
     UPLIFT_STEP,
+    can_pin,
     current_scenario,
     initialize_scenario_state,
+    next_scenario_name,
+    pin_scenario,
+    pinned_scenarios,
+    remove_pinned,
+    select_card,
+    selected_card_id,
     slider_bounds,
     uplift_percent,
 )
@@ -28,16 +57,12 @@ from utils.slider_calculations import (
 
 def _initialize_simulator_state(baseline) -> None:
     """Initialize session keys used by simulator controls and actions."""
-    if "show_starters" not in st.session_state:
-        st.session_state.show_starters = False
-    if "simulation_started" not in st.session_state:
-        st.session_state.simulation_started = False
     initialize_scenario_state(baseline)
 
 
 GOAL_TITLE = (
     "🎯 Users acquired over the next 3 months should generate this much more "
-    "value in their first 6 months (%)"
+    "value in their first 90 days (%)"
 )
 
 NUMBER_INPUT_CSS = """
@@ -146,8 +171,25 @@ def _render_step_slider(
         )
 
 
-def _render_scenario_readout(baseline, scenario: Scenario) -> None:
-    """State where the scenario lands relative to baseline and goal."""
+def _render_scenario_strip(baseline) -> None:
+    """
+    The live scenario, as a band under the assumptions rather than a column
+    beside them.
+
+    Its content is a headline plus four figures. Stacked in a narrow column it
+    ran about 265px, which set the height of the whole control row and left the
+    three sliders — 110px of content each — sitting in a quarter-screen of
+    nothing. Laid out wide it is a third of that, and the row reads as inputs
+    then outcome rather than interleaving the two.
+
+    The assumptions are the sliders directly above, so they are not repeated
+    here; that is what still separates this from a pinned row.
+
+    Rendered inside the assumptions card rather than as a card of its own: the
+    band is what those sliders produce, so a rule between them reads as one
+    block with two halves, where two cards read as two unrelated things.
+    """
+    scenario = current_scenario(baseline)
     goal = goal_value(baseline, uplift_percent())
     change = (
         (scenario.customer_value / baseline.customer_value - 1) * 100
@@ -155,14 +197,68 @@ def _render_scenario_readout(baseline, scenario: Scenario) -> None:
         else 0.0
     )
     gap = scenario.customer_value - goal
-    position = "above" if gap >= 0 else "below"
+    met = gap >= 0
 
-    st.markdown(
-        f"<div style='text-align:center; font-size:0.9rem; line-height:1.5;'>"
-        f"<b style='font-size:1.35rem;'>{money(scenario.customer_value)}</b><br>"
-        f"<span style='color:#5A6270;'>{change:+.1f}% vs Historical Baseline<br>"
-        f"{money(abs(gap))} {position} the goal</span></div>",
-        unsafe_allow_html=True,
+    with st.container(key="scenario_strip"):
+        head_col, stats_col, action_col = st.columns(
+            [1.15, 3.1, 1.25], gap="medium", vertical_alignment="center"
+        )
+
+        with head_col:
+            st.markdown(
+                scenario_strip_head_html(
+                    headline=money(scenario.customer_value),
+                    sub=(
+                        f"{change:+.1f}% vs baseline &nbsp;·&nbsp; "
+                        f"{money(abs(gap))} {'above' if met else 'below'} goal"
+                    ),
+                ),
+                unsafe_allow_html=True,
+            )
+
+        with stats_col:
+            st.markdown(
+                scenario_strip_stats_html(_pathway_rows(baseline, scenario)),
+                unsafe_allow_html=True,
+            )
+
+        with action_col:
+            st.markdown(
+                f'<div class="clue-strip-action">'
+                f'<span class="clue-goal {"met" if met else "missed"}">'
+                f'{"✓ meets goal" if met else "below goal"}</span></div>',
+                unsafe_allow_html=True,
+            )
+            # Slots taken by cards that are not pinned scenarios -- today just
+            # "Best observed". Passing the whole list length instead counted
+            # every pinned scenario twice.
+            other_cards = len(comparison_cards(baseline)) - len(pinned_scenarios())
+            room = can_pin(other_cards)
+            st.button(
+                f"📌 Pin as Scenario {next_scenario_name()}" if room
+                else f"📌 List is full ({MAX_RAIL_CARDS} scenarios)",
+                key="pin_scenario",
+                type="primary",
+                use_container_width=True,
+                disabled=not room,
+                help=None if room else "Remove a scenario to pin another.",
+                on_click=pin_scenario,
+                args=(current_scenario(baseline), other_cards),
+            )
+
+
+def _observed_caption(low: str, high: str, baseline) -> str:
+    """
+    What this factor actually did across the reference period.
+
+    Context, never a limit: the sliders stay open to values the history has
+    never seen, because "what if a campaign pushed this past anything we have
+    done" is exactly the kind of question the simulator exists for. Knowing
+    where that boundary sits is what makes the answer readable.
+    """
+    return (
+        f"<div class='clue-observed-range'>{baseline.period_label} range: "
+        f"{low} – {high}</div>"
     )
 
 
@@ -177,9 +273,22 @@ def _render_controls_row(baseline) -> None:
     st.markdown(NUMBER_INPUT_CSS, unsafe_allow_html=True)
     st.markdown(CONTROLS_ROW_CSS, unsafe_allow_html=True)
 
-    with st.container(border=True, height=250, key="card_sim_controls_row"):
-        goal_col, conversion_col, orders_col, value_col, readout_col = st.columns(
-            [1.15, 1, 1, 1, 1.1], gap="medium"
+    st.markdown(
+        f"<div class='clue-controls-heading'>"
+        f"<b>Metric profile assumptions for the next acquisition cohort</b><br>"
+        f"<span>Assume users acquired in {baseline.future_period_label} look "
+        f"roughly like this over their first {baseline.window_days} days. "
+        f"Below, that profile is translated into a concrete pathway you can pin "
+        f"and compare.</span></div>",
+        unsafe_allow_html=True,
+    )
+
+    # No fixed height, and no scenario column: the readout is a band beneath
+    # the inputs inside this same card, so every column in the row above it is
+    # an input and they are all about the same height.
+    with st.container(border=True, key="card_sim_controls_row"):
+        goal_col, conversion_col, orders_col, value_col = st.columns(
+            [1.35, 1, 1, 1], gap="medium"
         )
 
         with goal_col:
@@ -188,7 +297,10 @@ def _render_controls_row(baseline) -> None:
             # a style block inside a column offsets that column's content.
             _render_step_slider(
                 baseline,
-                title="🎯 Extra value from users acquired in the next 3 months (%)",
+                title=(
+                    f"🎯 Extra {baseline.window_days}-day value from users "
+                    f"acquired in the next 3 months (%)"
+                ),
                 inject_stepper_css=False,
             )
 
@@ -200,13 +312,18 @@ def _render_controls_row(baseline) -> None:
             )
             minimum, maximum, step = bounds[CONVERSION_KEY]
             st.slider(
-                "6-Month Purchase Conversion Rate",
+                f"{baseline.window_label} Purchase Conversion Rate",
                 min_value=minimum,
                 max_value=maximum,
                 step=step,
                 label_visibility="collapsed",
                 key=CONVERSION_KEY,
                 format="%.1f%%",
+            )
+            low, high = baseline.observed_range("conversion_rate")
+            st.markdown(
+                _observed_caption(percent(low), percent(high), baseline),
+                unsafe_allow_html=True,
             )
 
         with orders_col:
@@ -222,6 +339,11 @@ def _render_controls_row(baseline) -> None:
                 step=step,
                 label_visibility="collapsed",
                 key=ORDERS_KEY,
+            )
+            low, high = baseline.observed_range("orders_per_purchasing_customer")
+            st.markdown(
+                _observed_caption(decimal(low), decimal(high), baseline),
+                unsafe_allow_html=True,
             )
 
         with value_col:
@@ -239,126 +361,264 @@ def _render_controls_row(baseline) -> None:
                 key=ORDER_VALUE_KEY,
                 format="$%.2f",
             )
-
-        with readout_col:
+            low, high = baseline.observed_range("average_order_value")
             st.markdown(
-                "<h6 style='text-align: center;'>Scenario</h6>",
+                _observed_caption(money(low), money(high), baseline),
                 unsafe_allow_html=True,
             )
-            _render_scenario_readout(baseline, current_scenario(baseline))
-            if st.button(
-                "Generate Scenario Starters",
-                key="get_starters",
-                type="primary",
-                use_container_width=True,
-            ):
-                st.session_state.show_starters = not st.session_state.show_starters
-                st.rerun()
+
+        _render_scenario_strip(baseline)
 
 
 # ---------------------------------------------------------------------------
-# Scenario Starters
+# Scenario comparison
 # ---------------------------------------------------------------------------
 
-def _starter_detail(current: Scenario, starter) -> str:
+def _pathway_rows(baseline, scenario: Scenario) -> list[tuple[str, str]]:
     """
-    High-level summary of one starter: its assumption and what follows from it.
+    What one set of assumptions implies, against the same future cohort.
 
-    Read against the scenario currently in the controls, which is what the
-    starter was built from.
+    Both sides use the future acquisition volume, so "before" is what the next
+    three months would look like if nothing changed -- not the smaller cohort
+    CLUE is explaining, which would make the arrow a comparison between two
+    different-sized groups.
     """
-    scenario = starter.scenario
-    return "\n".join(
-        f"- {line}"
-        for line in (
-            starter.summary,
-            f"Purchasing Customers: {count(current.purchasing_customers)} → "
+    before = from_baseline(baseline)
+    return [
+        ("Future users", count(scenario.acquired_users)),
+        (
+            "Purchasing",
+            f"{count(before.purchasing_customers)} → "
             f"{count(scenario.purchasing_customers)}",
-            f"Total Orders: {count(current.total_orders)} → {count(scenario.total_orders)}",
-            f"Total Gross Order Value: {whole_money(current.total_gross_order_value)} → "
+        ),
+        (
+            "Orders",
+            f"{count(before.total_orders)} → {count(scenario.total_orders)}",
+        ),
+        (
+            "Gross value",
+            f"{whole_money(before.total_gross_order_value)} → "
             f"{whole_money(scenario.total_gross_order_value)}",
-            f"{PRIMARY_METRIC}: {money(current.customer_value)} → "
-            f"{money(scenario.customer_value)}",
-        )
+        ),
+    ]
+
+
+def _assumption_rows(baseline, scenario: Scenario) -> list[tuple[str, str]]:
+    return [
+        (f"{baseline.window_label} Conversion", percent(scenario.conversion_rate)),
+        ("Orders / Customer", decimal(scenario.orders_per_purchasing_customer)),
+        ("Avg Order Value", money(scenario.average_order_value)),
+    ]
+
+
+def _headline_row(baseline, scenario: Scenario) -> tuple[str, str]:
+    before = from_baseline(baseline)
+    return (
+        "Customer Value",
+        f"{money(before.customer_value)} → {money(scenario.customer_value)}",
     )
 
 
-def selected_starters(baseline) -> list:
+def comparison_cards(baseline) -> list[tuple[str, str, str, Scenario]]:
     """
-    The starters currently ticked, in their fixed listed order.
+    Every card on the rail: (id, title, note, scenario).
 
-    Rebuilt from the same current scenario the panel lists, so a tick always
-    refers to the numbers on screen.
+    The live scenario is *not* here -- it lives in the control row, beside the
+    sliders that produce it, so a participant sees it change as they drag. A
+    copy of it on the rail was showing the same thing twice.
+
+    The observed-best card is a starting point for someone facing three sliders
+    with no obvious place to begin; it is removable like any pinned card.
     """
-    goal = goal_value(baseline, uplift_percent())
-    return [
-        starter
-        for starter in starters(current_scenario(baseline), goal)
-        if st.session_state.get(f"starter_{starter.key}", False)
+    cards: list[tuple[str, str, str, Scenario]] = []
+    if st.session_state.get("show_reference_card", True):
+        cards.append(
+            (
+                REFERENCE_CARD_ID,
+                "Best observed",
+                f"each factor at its best month in {baseline.period_label} — "
+                f"a composite, not one actual month",
+                from_observed_best(baseline),
+            )
+        )
+    cards += [
+        (name, f"Scenario {name}", "pinned", scenario)
+        for name, scenario in pinned_scenarios()
     ]
+    return cards
+
+
+REFERENCE_CARD_ID = "__reference__"
 
 
 def scenario_to_simulate(baseline) -> Scenario:
     """
     The scenario the results describe.
 
-    Ticked starters take precedence -- each replaces the one factor it moves,
-    on top of the controls; with none ticked, the controls are the scenario.
+    A selected card if there is one, otherwise the live scenario -- so trying
+    a set of assumptions never requires pinning it first.
     """
-    current = current_scenario(baseline)
-    chosen = selected_starters(baseline)
-    return combine(current, chosen) if chosen else current
+    selected = selected_card_id()
+    for card_id, _, _, scenario in comparison_cards(baseline):
+        if card_id == selected:
+            return scenario
+    return current_scenario(baseline)
 
 
-def _render_scenario_starters_panel(baseline) -> None:
+def selected_card_title(baseline) -> str:
+    selected = selected_card_id()
+    for card_id, title, _, _ in comparison_cards(baseline):
+        if card_id == selected:
+            return title
+    return "the current settings"
+
+
+def _toggle_card(card_id: str) -> None:
     """
-    Render the Scenario Starters panel.
+    Select a card, or return to the live scenario if it was already selected.
 
-    Starters are hypothetical starting points for exploration, listed in a
-    fixed order. None is marked best or recommended, and ticking one shows
-    what it would imply rather than committing to it.
+    A callback, not a post-render branch: Streamlit runs `on_click` before the
+    script body, so the rail is drawn from state that already reflects the
+    click. Mutating afterwards and calling `st.rerun()` leaves the removed
+    card's keyed container behind as a ghost.
     """
-    with st.container(border=True, height=285, key="card_sim_starters"):
-        st.subheader(
-            "Scenario Starters 🤖",
-            help=(
-                "Hypothetical starting points for exploration, not recommendations. "
-                "Select one to see what it would imply, or set your own assumptions "
-                "with the controls."
-            ),
-        )
-        if not st.session_state.show_starters:
-            st.write(
-                "Click Generate Scenario Starters for a few hypothetical starting "
-                "points, or set your own assumptions with the controls."
-            )
-            return
+    select_card(CURRENT_CARD_ID if selected_card_id() == card_id else card_id)
 
-        current = current_scenario(baseline)
-        goal = goal_value(baseline, uplift_percent())
-        listed = starters(current, goal)
 
-        left_col, right_col = st.columns([0.6, 0.4], gap="small")
+def _remove_card(card_id: str) -> None:
+    """Drop a card from the rail, falling back to the live scenario."""
+    if card_id == REFERENCE_CARD_ID:
+        st.session_state.show_reference_card = False
+    else:
+        remove_pinned(card_id)
+    if selected_card_id() == card_id:
+        select_card(CURRENT_CARD_ID)
 
-        with left_col:
-            for starter in listed:
-                st.checkbox(
-                    f"{starter.name} — {starter.summary}",
-                    key=f"starter_{starter.key}",
+
+def _render_comparison_and_results(baseline) -> None:
+    """
+    Scenario list on the left, simulation results on the right.
+
+    One row rather than two stacked ones. Choosing a scenario and reading what
+    it implies is a single glance sideways, not a scroll past the fold -- which
+    also means the Simulate button, the started/not-started state, and the
+    scroll-into-view script all stop being needed. Clicking a row is the whole
+    interaction.
+    """
+    goal = goal_value(baseline, uplift_percent())
+    cards = comparison_cards(baseline)
+    selected = selected_card_id()
+    chosen = next(
+        (card for card in cards if card[0] == selected), None
+    )
+
+    with st.container(border=True, key="card_sim_comparison"):
+        with st.container(key="sim_split"):
+            list_col, results_col = st.columns([1, 3], gap="medium")
+
+            with list_col:
+                st.markdown("###### Scenarios")
+                st.caption(
+                    f"{count(baseline.future_acquired_users)} users acquired "
+                    f"{baseline.future_period_label} · goal {md(money(goal))}"
                 )
-
-            if st.button("Start Simulation", key="start_simulation", type="primary", width=150):
-                st.session_state.simulation_started = True
-
-        with right_col:
-            for starter in listed:
-                if st.session_state.get(f"starter_{starter.key}", False):
-                    st.markdown(
-                        get_detail_box_html(_starter_detail(current, starter)),
-                        unsafe_allow_html=True,
+                if not cards:
+                    st.caption(
+                        "Nothing pinned yet — set assumptions above and pin them "
+                        "to compare here."
                     )
                 else:
-                    st.empty()
+                    _render_scenario_list(baseline, cards, goal, selected)
+
+            with results_col:
+                _render_results_column(baseline, chosen)
+
+
+def _render_scenario_list(baseline, cards, goal: float, selected: str) -> None:
+    """The left column: one compact row per scenario, click to select."""
+    with st.container(key="scenario_list"):
+        for card_id, title, note, scenario in cards:
+            with st.container(key=f"listrow_{card_id}"):
+                met = scenario.customer_value >= goal
+                st.markdown(
+                    scenario_row_html(
+                        title=title,
+                        note=note,
+                        headline=money(scenario.customer_value),
+                        assumptions=(
+                            f"{percent(scenario.conversion_rate)} · "
+                            f"{decimal(scenario.orders_per_purchasing_customer)} · "
+                            f"{money(scenario.average_order_value)}"
+                        ),
+                        goal_met=met,
+                        goal_text="✓ meets goal" if met else "below goal",
+                        is_selected=card_id == selected,
+                    ),
+                    unsafe_allow_html=True,
+                )
+                # Both buttons are lifted on top of the row by CSS: clicking
+                # anywhere selects, the corner removes. Clicking the selected
+                # row again clears the selection and returns the results panel
+                # to its hint.
+                st.button(
+                    "Select",
+                    key=f"select_{card_id}",
+                    use_container_width=True,
+                    on_click=_toggle_card,
+                    args=(card_id,),
+                )
+                st.button(
+                    "✕",
+                    key=f"remove_{card_id}",
+                    help=f"Remove {title}",
+                    on_click=_remove_card,
+                    args=(card_id,),
+                )
+
+
+def _render_results_column(baseline, chosen) -> None:
+    """
+    The right column: what the selected scenario implies, and its propagation.
+
+    With nothing selected there is nothing to propagate, so the panel says so
+    rather than showing a graph of the scenario the sliders happen to describe
+    -- those numbers are already on screen in the control row above.
+    """
+    if chosen is None:
+        st.markdown("###### Simulation Results")
+        st.markdown(
+            scenario_hint_html(
+                "Select a scenario on the left to see what it implies "
+                "and how the change propagates through the metric."
+            ),
+            unsafe_allow_html=True,
+        )
+        return
+
+    _, title, _, scenario = chosen
+    st.markdown(f"###### Simulation Results — {title}")
+
+    blocks = (
+        ("Scenario assumptions", _assumption_lines(baseline, scenario)),
+        ("Implied Data Changes", _consequence_lines(baseline, scenario)),
+        ("Scenario result", _result_lines(baseline, scenario)),
+    )
+    # Keyed so the split's column rules, which are descendant selectors, can be
+    # reset for these nested columns -- otherwise the first block inherits the
+    # scenario list's fixed width and the last one inherits flex-grow.
+    with st.container(key="result_blocks"):
+        columns = st.columns(len(blocks), gap="small")
+        for column, (block_title, lines) in zip(columns, blocks):
+            with column:
+                st.markdown(
+                    result_block_html(
+                        block_title, "\n".join(f"- {line}" for line in lines)
+                    ),
+                    unsafe_allow_html=True,
+                )
+
+    st.markdown(legend_style_html(), unsafe_allow_html=True)
+    render_simulation_graph(deltas=simulation_deltas(baseline, scenario))
 
 
 # ---------------------------------------------------------------------------
@@ -399,11 +659,22 @@ def _assumption_lines(baseline, scenario: Scenario) -> list[str]:
 
 
 def _consequence_lines(baseline, scenario: Scenario) -> list[str]:
+    """
+    Absolute counts, both sides on the future acquisition volume.
+
+    Comparing against the explained cohort's own counts would put a group of
+    31 users beside a group of 448 and call the difference a consequence of the
+    assumptions.
+    """
+    before = from_baseline(baseline)
     return [
-        f"Purchasing Customers: {count(baseline.purchasing_customers)} → "
+        f"Future Acquired Users ({baseline.future_period_label}): "
+        f"{count(scenario.acquired_users)}",
+        f"Purchasing Customers: {count(before.purchasing_customers)} → "
         f"{count(scenario.purchasing_customers)}",
-        f"Total Orders: {count(baseline.total_orders)} → {count(scenario.total_orders)}",
-        f"Total Gross Order Value: {whole_money(baseline.total_gross_order_value)} → "
+        f"Total Orders: {count(before.total_orders)} → "
+        f"{count(scenario.total_orders)}",
+        f"Total Gross Order Value: {whole_money(before.total_gross_order_value)} → "
         f"{whole_money(scenario.total_gross_order_value)}",
     ]
 
@@ -423,51 +694,12 @@ def _result_lines(baseline, scenario: Scenario) -> list[str]:
     ]
 
 
-def _render_simulation_output_panel(baseline) -> None:
-    """Render the scenario's assumptions, consequences, result, and propagation."""
-    with st.container(border=True, height=400, key="card_sim_output"):
-        st.subheader("Simulation Results")
-        if not st.session_state.simulation_started:
-            st.write("Click Start Simulation to generate output here.")
-            return
-
-        scenario = scenario_to_simulate(baseline)
-        chosen = selected_starters(baseline)
-        st.caption(
-            "From the selected Scenario Starters: "
-            + ", ".join(starter.name for starter in chosen)
-            if chosen
-            else "From the assumptions set in the controls."
-        )
-
-        blocks = (
-            ("Scenario assumptions", _assumption_lines(baseline, scenario)),
-            ("Computed consequences", _consequence_lines(baseline, scenario)),
-            ("Scenario result", _result_lines(baseline, scenario)),
-        )
-        columns = st.columns(len(blocks), gap="small")
-        for column, (title, lines) in zip(columns, blocks):
-            with column:
-                st.markdown(f"###### {title}")
-                st.markdown(
-                    get_detail_box_html("\n".join(f"- {line}" for line in lines)),
-                    unsafe_allow_html=True,
-                )
-
-        # ---------------------------------------------------------------------------
-        # Legend
-        # ---------------------------------------------------------------------------
-        st.markdown(legend_style_html(), unsafe_allow_html=True)
-
-        render_simulation_graph(deltas=simulation_deltas(baseline, scenario))
-
-
 def render_simulator_view() -> None:
     """
     Render the simulator page.
 
-    Controls across the first row, then Scenario Starters and the results
-    below, both full width.
+    Assumptions across the first row, the live scenario as a band beneath
+    them, then the scenario list and its results side by side.
     """
     baseline = load_baseline()
 
@@ -476,6 +708,9 @@ def render_simulator_view() -> None:
 
     render_top_view(button_text="Back to Main View", view_type="main")
 
+    # Injected once, up front: the control row's live panel and the rail below
+    # share the same row markup.
+    st.markdown(scenario_rail_css(), unsafe_allow_html=True)
+
     _render_controls_row(baseline)
-    _render_scenario_starters_panel(baseline)
-    _render_simulation_output_panel(baseline)
+    _render_comparison_and_results(baseline)

@@ -15,6 +15,7 @@ from urllib.parse import urlencode, urlparse
 
 import streamlit as st
 
+from metrics.compute import CohortFilter
 from metrics.registry import METRICS
 from study.session import TOKEN_PARAM, Session
 
@@ -30,18 +31,31 @@ def base_url() -> str:
     return os.environ.get("CLUE_URL", DEFAULT_CLUE_URL).rstrip("/")
 
 
-def clue_url_for(metric_id: str, session: Session | None = None) -> str | None:
+def clue_url_for(
+    metric_id: str,
+    session: Session | None = None,
+    cohort: CohortFilter | None = None,
+) -> str | None:
     """
     Link into CLUE for a metric, or None if it has no counterpart there yet.
 
-    Carries the session token so CLUE-side logging can later attribute events to
-    the same participant without asking them to identify themselves twice.
+    Carries three things:
+
+    - the metric name, so the handoff is self-describing;
+    - the reference acquisition period, so CLUE explains the cohort the
+      participant was actually looking at rather than a pinned default -- both
+      apps then apply the same rule for which month the headline describes;
+    - the session token, so CLUE-side logging can attribute events to the same
+      participant without asking them to identify themselves twice.
     """
     metric = METRICS.get(metric_id)
     if metric is None or not metric.clue_metric:
         return None
 
     params = {"metric": metric.clue_metric}
+    if cohort is not None:
+        params["start"] = str(cohort.start_month)
+        params["end"] = str(cohort.end_month)
     if session is not None and session.token:
         params[TOKEN_PARAM] = session.token
     return f"{base_url()}/?{urlencode(params)}"

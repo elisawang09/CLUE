@@ -28,7 +28,7 @@ STATIC_URL = "/app/static"
 # ---------------------------------------------------------------------------
 
 COLORS: dict[str, str] = {
-    # Root (6-Month Customer Value orange box)
+    # Root (90-Day Customer Value orange box)
     "root_bg":      "#FCE4C6",
     "root_border":  "#F4A23A",
     "root_text":    "#C97A10",
@@ -415,7 +415,7 @@ def legend_style_html() -> str:
                         background:#fff;border:1px solid #E2E8F0;border-radius:8px;
                         font-size:0.8rem;color:#374151;align-items:center">
             <span><span style="background:{COLORS['root_bg']}; border:3px solid {COLORS['root_border']};border-radius:4px;
-                padding:1px 8px; color:{COLORS['root_text']}; font-weight:700">6-Month Customer Value</span>&nbsp; Root</span>
+                padding:1px 8px; color:{COLORS['root_text']}; font-weight:700">90-Day Customer Value</span>&nbsp; Root</span>
             <span><span style="background:{COLORS['op_bg']};border:1.5px solid {COLORS['op_border']};
                 border-radius:4px;padding:1px 8px;color:{COLORS['op_text']}">&times; &div;</span>&nbsp; Operator</span>
             <span><span style="background:{COLORS['ratio_bg']};border:1.5px solid {COLORS['ratio_border']};

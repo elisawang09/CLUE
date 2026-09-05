@@ -98,7 +98,9 @@ class TestConditionGating(unittest.TestCase):
         self.assertFalse(app.exception)
         urls = clue_links(app)
         self.assertEqual(len(urls), 1, "expected exactly one Open in CLUE link")
-        self.assertIn("metric=PLTV", urls[0])
+        self.assertIn("metric=90-Day+Customer+Value", urls[0])
+        # The link carries the cohort the participant was looking at.
+        self.assertIn("start=2024-01&end=2024-06", urls[0])
         self.assertIn(f"s={CLUE_TOKEN}", urls[0])
 
     def test_baseline_condition_offers_no_link(self):

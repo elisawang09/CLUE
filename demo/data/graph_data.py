@@ -1,13 +1,13 @@
 """
 graph_data.py
 -------------
-Graph definition for the 6-Month Customer Value provenance graph.
+Graph definition for the 90-Day Customer Value provenance graph.
 Defines node types, symbols, edges, transformation flows, and simulation deltas.
 
 The metric structure follows the headline formula:
 
-    6-Month Customer Value
-      = 6-Month Purchase Conversion Rate     (Purchasing Customers / Acquired Users)
+    90-Day Customer Value
+      = 90-Day Purchase Conversion Rate      (Purchasing Customers / Acquired Users)
       x Orders per Purchasing Customer       (Total Orders / Purchasing Customers)
       x Average Order Value                  (Total Gross Order Value / Total Orders)
 
@@ -22,7 +22,7 @@ from enum import Enum
 
 
 class NodeType(str, Enum):
-    ROOT = "root"           # The primary metric (6-Month Customer Value) - orange box
+    ROOT = "root"           # The primary metric (90-Day Customer Value) - orange box
     OPERATOR = "operator"   # Arithmetic operator diamond (×, ÷)
     METRIC = "metric"       # A sub-metric circle with # symbol
     RATIO = "ratio"         # A ratio/percentage metric with % symbol
@@ -94,11 +94,11 @@ NODES: list[Node] = [
     # Root
     Node(
         id="cust_val",
-        label="6-Month Customer Value",
+        label="90-Day Customer Value",
         node_type=NodeType.ROOT,
         description=(
-            "Average value generated per acquired user during the first 6 months "
-            "after acquisition. Calculated as 6-Month Purchase Conversion Rate × "
+            "Average value generated per acquired user during their first 90 days "
+            "after acquisition. Calculated as 90-Day Purchase Conversion Rate × "
             "Orders per Purchasing Customer × Average Order Value."
         ),
         x=0, y=2,
@@ -113,12 +113,12 @@ NODES: list[Node] = [
     # The three factors
     Node(
         id="conv_rate",
-        label="6-Month Purchase Conversion Rate",
+        label="90-Day Purchase Conversion Rate",
         node_type=NodeType.RATIO,
         symbol="%",
         description=(
             "Share of acquired users who place at least one order within their "
-            "first 6 months. Calculated as Purchasing Customers ÷ Acquired Users."
+            "first 90 days. Calculated as Purchasing Customers ÷ Acquired Users."
         ),
         x=2, y=0,
     ),
@@ -129,7 +129,7 @@ NODES: list[Node] = [
         symbol="#",
         description=(
             "Average number of orders placed by a customer who ordered at least "
-            "once in their first 6 months. Users who never ordered are excluded "
+            "once in their first 90 days. Users who never ordered are excluded "
             "from this average. Calculated as Total Orders ÷ Purchasing Customers."
         ),
         x=2, y=2,
@@ -154,7 +154,7 @@ NODES: list[Node] = [
         symbol="#",
         description=(
             "Acquired users with at least one qualifying order during their first "
-            "6 months after acquisition."
+            "90 days after acquisition."
         ),
         x=4, y=-0.5,
     ),
@@ -177,7 +177,7 @@ NODES: list[Node] = [
         symbol="#",
         description=(
             "Orders placed by the acquisition group, counting only orders within "
-            "each user's own first 6 months."
+            "each user's own first 90 days."
         ),
         x=4, y=1.5,
     ),
@@ -188,7 +188,7 @@ NODES: list[Node] = [
         symbol="#",
         description=(
             "Acquired users with at least one qualifying order during their first "
-            "6 months after acquisition."
+            "90 days after acquisition."
         ),
         x=4, y=2.5,
     ),
@@ -210,7 +210,7 @@ NODES: list[Node] = [
         symbol="#",
         description=(
             "Orders placed by the acquisition group, counting only orders within "
-            "each user's own first 6 months."
+            "each user's own first 90 days."
         ),
         x=4, y=4.5,
     ),
@@ -221,7 +221,7 @@ NODES: list[Node] = [
 # ---------------------------------------------------------------------------
 
 EDGES: list[Edge] = [
-    # 6-Month Customer Value → multiply operator
+    # 90-Day Customer Value → multiply operator
     Edge("cust_val", "op_mul"),
 
     # multiply operator feeds the three factors
@@ -340,7 +340,7 @@ def simulation_deltas(baseline=None, scenario=None) -> dict[str, SimulationDelta
         Purchasing Customers    = Acquired Users x Conversion Rate
         Total Orders            = Purchasing Customers x Orders per Customer
         Total Gross Order Value = Total Orders x Average Order Value
-        6-Month Customer Value  = Conversion x Orders per Customer x AOV
+        90-Day Customer Value   = Conversion x Orders per Customer x AOV
 
     With no scenario given, every assumption sits at its observed value, so the
     graph shows the baseline against itself. The baseline is never modified.
@@ -350,6 +350,13 @@ def simulation_deltas(baseline=None, scenario=None) -> dict[str, SimulationDelta
 
     base = load_baseline() if baseline is None else baseline
     plan = from_baseline(base) if scenario is None else scenario
+
+    # Counts are compared against the baseline *rates applied to the same
+    # future cohort*, not against the explained cohort's own counts. The
+    # scenario plans the next three months; putting a 31-user group beside a
+    # 448-user one would report the difference in cohort size as a consequence
+    # of the assumptions.
+    before = from_baseline(base)
 
     conv_rate = plan.conversion_rate
     orders_per_cust = plan.orders_per_purchasing_customer
@@ -382,25 +389,26 @@ def simulation_deltas(baseline=None, scenario=None) -> dict[str, SimulationDelta
             _assumption_note(base.average_order_value, avg_order_val, money),
         ),
         "acq_users": _delta(
-            "acq_users", acq_users, base.acquired_users, count,
-            "Size of the acquisition group; unchanged by the scenario.",
+            "acq_users", acq_users, before.acquired_users, count,
+            "Size of the future acquisition group; unchanged by the scenario.",
         ),
         "tot_gross_val": _delta(
-            "tot_gross_val", tot_gross_val, base.total_gross_order_value, whole_money,
+            "tot_gross_val", tot_gross_val, before.total_gross_order_value,
+            whole_money,
             f"Computed consequence: {count(tot_orders)} orders × {money(avg_order_val)}.",
         ),
     }
 
     for node_id in ("purch_cust_1", "purch_cust_2"):
         deltas[node_id] = _delta(
-            node_id, purch_cust, base.purchasing_customers, count,
+            node_id, purch_cust, before.purchasing_customers, count,
             f"Computed consequence: {count(acq_users)} acquired users × "
             f"{percent(conv_rate)}.",
         )
 
     for node_id in ("tot_orders_1", "tot_orders_2"):
         deltas[node_id] = _delta(
-            node_id, tot_orders, base.total_orders, count,
+            node_id, tot_orders, before.total_orders, count,
             f"Computed consequence: {count(purch_cust)} purchasing customers × "
             f"{decimal(orders_per_cust)} orders each.",
         )
@@ -413,11 +421,17 @@ def simulation_deltas(baseline=None, scenario=None) -> dict[str, SimulationDelta
 # ---------------------------------------------------------------------------
 #
 # Four of the six leaves share the same pipeline up to "qualifying orders":
-# select the acquisition group, join their orders, derive customer_age_month,
-# then keep months 1-6. _acquisition_stage() builds that shared prefix so the
+# select the acquisition group, join their orders, derive customer_age_day,
+# then keep days 0-89. _acquisition_stage() builds that shared prefix so the
 # flows cannot describe the population differently from one another.
 
-_REFERENCE_PERIOD = "Jan-Mar 2022"
+# The cohort CLUE is explaining, resolved at render time from the handoff
+# link rather than pinned -- the flows describe the same month the headline
+# and the chart do.
+def _cohort_label() -> str:
+    from data.metrics import load_baseline
+
+    return load_baseline().cohort_label
 _QUALIFYING_ID = "qualifying"
 
 # Both edges into a join carry the same detail, the way the original flows put
@@ -446,7 +460,7 @@ def _acquisition_stage(
             label="acquired_users",
             node_type=TransformationNodeType.FILTER,
             description=(
-                f"The users acquired in {_REFERENCE_PERIOD}, including those who "
+                f"The users acquired in {_cohort_label()}, including those who "
                 f"never order."
             ),
             icon="filter_table.png",
@@ -472,10 +486,13 @@ def _acquisition_stage(
             x=2, y=0.6,
         ),
         TransformationNode(
-            id=f"age_month{suffix}",
-            label="customer_age_month",
+            id=f"age_day{suffix}",
+            label="customer_age_day",
             node_type=TransformationNodeType.NEW_COLUMN,
-            description="Each order's month relative to that user's own acquisition date.",
+            description=(
+                "Days between that user's own acquisition date and the order. "
+                "Day 0 is the acquisition day itself."
+            ),
             icon="new_column.png",
             x=3, y=0.6,
         ),
@@ -483,7 +500,7 @@ def _acquisition_stage(
             id=f"{_QUALIFYING_ID}{suffix}",
             label="qualifying_orders",
             node_type=TransformationNodeType.FILTER,
-            description="Orders placed inside each user's own first six months.",
+            description="Orders placed inside each user's own first 90 days.",
             icon="filter_table.png",
             x=4, y=0.6,
         ),
@@ -493,7 +510,7 @@ def _acquisition_stage(
         TransformationEdge(
             f"raw_customers{suffix}", f"acq_users{suffix}", "Filter applied",
             description=(
-                f"WHERE acquisition_date IN {_REFERENCE_PERIOD}\n"
+                f"WHERE acquisition_date IN {_cohort_label()}\n"
                 f"Every acquired user is kept, including those who never order, "
                 f"so non-purchasers stay in the denominator of the metric."
             ),
@@ -507,21 +524,22 @@ def _acquisition_stage(
             description=_JOIN_ORDERS_DETAIL,
         ),
         TransformationEdge(
-            f"user_orders{suffix}", f"age_month{suffix}", "New Column",
+            f"user_orders{suffix}", f"age_day{suffix}", "New Column",
             description=(
-                "SELECT MONTHS_BETWEEN(order_date, acquisition_date) + 1 "
-                "AS customer_age_month\n"
-                "Month 1 is acquisition_date <= order_date < acquisition_date "
-                "+ 1 month."
+                "SELECT DATEDIFF(order_date, acquisition_date) "
+                "AS customer_age_day\n"
+                "Whole days, so the boundary falls at midnight rather than at "
+                "the acquisition time of day."
             ),
         ),
         TransformationEdge(
-            f"age_month{suffix}", f"{_QUALIFYING_ID}{suffix}", "Filter applied",
+            f"age_day{suffix}", f"{_QUALIFYING_ID}{suffix}", "Filter applied",
             description=(
-                "WHERE customer_age_month BETWEEN 1 AND 6\n"
-                "Each user is observed for their own first six months, never by "
-                "calendar date, so users acquired later in the period get the "
-                "same length of window."
+                "WHERE customer_age_day BETWEEN 0 AND 89\n"
+                "Day 0 is the acquisition day, so this is the first 90 days. "
+                "Each user is observed from their own acquisition date, never "
+                "by calendar date, so users acquired later in the month get "
+                "the same length of window."
             ),
         ),
     ]
@@ -546,7 +564,7 @@ def _acquired_users_flow() -> tuple[list[TransformationNode], list[Transformatio
                 label="acquired_users",
                 node_type=TransformationNodeType.FILTER,
                 description=(
-                    f"The users acquired in {_REFERENCE_PERIOD}, including those "
+                    f"The users acquired in {_cohort_label()}, including those "
                     f"who never order."
                 ),
                 icon="filter_table.png",
@@ -568,7 +586,7 @@ def _acquired_users_flow() -> tuple[list[TransformationNode], list[Transformatio
             TransformationEdge(
                 "raw_customers_au", "acq_users_au", "Filter applied",
                 description=(
-                    f"WHERE acquisition_date IN {_REFERENCE_PERIOD}\n"
+                    f"WHERE acquisition_date IN {_cohort_label()}\n"
                     f"The reference acquisition period: which users belong to "
                     f"this historical group."
                 ),
@@ -596,7 +614,7 @@ def _purchasing_customers_flow(
             label="Purchasing Customers",
             node_type=TransformationNodeType.OUTPUT,
             description=(
-                "Acquired users with at least one order in their first six months."
+                "Acquired users with at least one order in their first 90 days."
             ),
             icon="output.png",
             x=5, y=0.6,
@@ -627,7 +645,7 @@ def _total_orders_flow(
             label="Total Orders",
             node_type=TransformationNodeType.AGGREGATION,
             description=(
-                "Orders placed by the acquisition group in their first six months."
+                "Orders placed by the acquisition group in their first 90 days."
             ),
             icon="output.png",
             x=5, y=0.6,
@@ -699,7 +717,7 @@ def _gross_value_flow() -> tuple[list[TransformationNode], list[TransformationEd
             label="Total Gross Order Value",
             node_type=TransformationNodeType.AGGREGATION,
             description=(
-                "Value generated by the acquisition group in their first six months."
+                "Value generated by the acquisition group in their first 90 days."
             ),
             icon="output.png",
             x=6, y=1.8,
@@ -713,7 +731,7 @@ def _gross_value_flow() -> tuple[list[TransformationNode], list[TransformationEd
     lines_detail = (
         "FROM qualifying_orders JOIN gross_value USING (order_id)\n"
         "Keeps only the lines belonging to orders inside each user's first "
-        "six months."
+        "90 days."
     )
 
     edges += [
@@ -752,13 +770,25 @@ def _gross_value_flow() -> tuple[list[TransformationNode], list[TransformationEd
     return nodes, edges
 
 
-TRANSFORMATION_FLOWS: dict[
-    str, tuple[list[TransformationNode], list[TransformationEdge]]
-] = {
-    "acq_users": _acquired_users_flow(),
-    "purch_cust_1": _purchasing_customers_flow("_pc1"),
-    "purch_cust_2": _purchasing_customers_flow("_pc2"),
-    "tot_orders_1": _total_orders_flow("_to1"),
-    "tot_orders_2": _total_orders_flow("_to2"),
-    "tot_gross_val": _gross_value_flow(),
+# Built per call, not once at import. The flows name the cohort month CLUE is
+# explaining, which arrives on the handoff link -- baking them in at import
+# would pin whichever participant loaded the process first onto everyone after
+# them.
+_FLOW_BUILDERS = {
+    "acq_users": _acquired_users_flow,
+    "purch_cust_1": lambda: _purchasing_customers_flow("_pc1"),
+    "purch_cust_2": lambda: _purchasing_customers_flow("_pc2"),
+    "tot_orders_1": lambda: _total_orders_flow("_to1"),
+    "tot_orders_2": lambda: _total_orders_flow("_to2"),
+    "tot_gross_val": _gross_value_flow,
 }
+
+FLOW_IDS: frozenset[str] = frozenset(_FLOW_BUILDERS)
+
+
+def transformation_flow(
+    leaf_node_id: str | None,
+) -> tuple[list[TransformationNode], list[TransformationEdge]]:
+    """The transformation flow for one leaf, or empty lists if it has none."""
+    builder = _FLOW_BUILDERS.get(leaf_node_id or "")
+    return builder() if builder else ([], [])

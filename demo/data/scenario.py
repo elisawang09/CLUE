@@ -14,14 +14,26 @@ A scenario is three assumptions; everything downstream is propagated from them:
     Purchasing Customers    = Acquired Users x Conversion Rate
     Total Orders            = Purchasing Customers x Orders per Customer
     Total Gross Order Value = Total Orders x Average Order Value
-    6-Month Customer Value  = Conversion x Orders per Customer x AOV
+    90-Day Customer Value   = Conversion x Orders per Customer x AOV
+
+The assumptions are taken exactly as set. Nothing here widens them into a
+range, and nothing generates alternative scenarios on the participant's behalf:
+a tolerance band would be *our* guess at what counts as a plausible movement,
+and the point of the simulator is to let someone explore a movement we have not
+anticipated -- a campaign that beats anything in the history, for instance.
+
+`acquired_users` is the *future* acquisition volume, not the size of the cohort
+being explained. It scales the absolute counts a scenario implies and does not
+affect the headline at all: customer value is per acquired user, so it divides
+back out. Holding it the same across scenarios is what makes their counts
+comparable.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
-from data.metrics import BaselineMetrics, decimal, money, percent
+from data.metrics import BaselineMetrics
 
 # Default planning goal, as a percentage above the historical baseline.
 DEFAULT_UPLIFT_PERCENT = 15
@@ -66,115 +78,46 @@ class Scenario:
 
 
 def from_baseline(baseline: BaselineMetrics) -> Scenario:
-    """The scenario that reproduces history: every assumption at its observed value."""
+    """
+    The scenario that reproduces history: every assumption at its observed
+    value, applied to the future acquisition volume.
+
+    This is the comparison column on every pathway card -- "what the next three
+    months would look like if nothing changed" -- so it has to be built on the
+    same acquired-user count as the scenarios it is compared against.
+    """
     return Scenario(
         conversion_rate=baseline.conversion_rate,
         orders_per_purchasing_customer=baseline.orders_per_purchasing_customer,
         average_order_value=baseline.average_order_value,
-        acquired_users=baseline.acquired_users,
+        acquired_users=baseline.future_acquired_users,
+    )
+
+
+def from_observed_best(baseline: BaselineMetrics) -> Scenario:
+    """
+    Each factor at its best month in the reference period.
+
+    Offered as a starting point for someone facing three sliders and no obvious
+    place to begin. It is a *composite* -- the three maxima can come from three
+    different months -- so the card that shows it says so rather than letting it
+    read as a quarter that actually happened.
+    """
+    conversion, orders, order_value = baseline.observed_best
+    return Scenario(
+        conversion_rate=conversion,
+        orders_per_purchasing_customer=orders,
+        average_order_value=order_value,
+        acquired_users=baseline.future_acquired_users,
     )
 
 
 def goal_value(baseline: BaselineMetrics, uplift_percent: float) -> float:
     """
     The planning goal: what users acquired over the next 3 months should
-    generate during their first 6 months, relative to the reference group.
+    generate during their first 90 days, relative to the reference cohort.
     """
     return baseline.customer_value * (1 + uplift_percent / 100)
-
-
-# ---------------------------------------------------------------------------
-# Scenario starters
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class Starter:
-    """
-    A hypothetical starting point for exploration -- not a recommendation.
-
-    Starters are returned in a fixed order and carry no score: CLUE has not
-    established that any of them is achievable, preferable, or best.
-    """
-
-    key: str
-    name: str
-    summary: str
-    scenario: Scenario
-
-
-def starters(current: Scenario, goal: float) -> list[Starter]:
-    """
-    Three starting points, each closing the gap to the goal through a different
-    factor while holding the other two where they are.
-
-    They start from the scenario currently set in the controls, not from the
-    historical baseline: after moving a slider, the starters answer "from here,
-    what single change would reach the goal?".
-    """
-    base = current
-    factor = goal / current.customer_value if current.customer_value else 1.0
-
-    def _summary(label: str, before: str, after: str) -> str:
-        return f"{label}: {before} → {after}, other factors held where they are"
-
-    conversion = min(1.0, base.conversion_rate * factor)
-    orders = base.orders_per_purchasing_customer * factor
-    order_value = base.average_order_value * factor
-
-    return [
-        Starter(
-            key="conversion",
-            name="Conversion-led",
-            summary=_summary(
-                "6-Month Purchase Conversion Rate",
-                percent(base.conversion_rate),
-                percent(conversion),
-            ),
-            scenario=replace(base, conversion_rate=conversion),
-        ),
-        Starter(
-            key="frequency",
-            name="Frequency-led",
-            summary=_summary(
-                "Orders per Purchasing Customer",
-                decimal(base.orders_per_purchasing_customer),
-                decimal(orders),
-            ),
-            scenario=replace(base, orders_per_purchasing_customer=orders),
-        ),
-        Starter(
-            key="order_value",
-            name="Order-value-led",
-            summary=_summary(
-                "Average Order Value",
-                money(base.average_order_value),
-                money(order_value),
-            ),
-            scenario=replace(base, average_order_value=order_value),
-        ),
-    ]
-
-
-def combine(current: Scenario, chosen: list[Starter]) -> Scenario:
-    """
-    One scenario from several starters.
-
-    Each starter moves a single factor, so selecting more than one simply
-    carries each of those assumptions into the same scenario, on top of
-    whatever the controls currently say. Selecting none changes nothing.
-    """
-    base = current
-    changes: dict[str, float] = {}
-    for starter in chosen:
-        if starter.key == "conversion":
-            changes["conversion_rate"] = starter.scenario.conversion_rate
-        elif starter.key == "frequency":
-            changes["orders_per_purchasing_customer"] = (
-                starter.scenario.orders_per_purchasing_customer
-            )
-        elif starter.key == "order_value":
-            changes["average_order_value"] = starter.scenario.average_order_value
-    return replace(base, **changes)
 
 
 # ---------------------------------------------------------------------------

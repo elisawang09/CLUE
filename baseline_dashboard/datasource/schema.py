@@ -42,11 +42,6 @@ TABLES: dict[str, TableSpec] = {
             "One row per acquired user.",
         ),
         TableSpec(
-            "customer_age_facts",
-            ("user_id", "customer_age_month", "orders", "gross_value"),
-            "One row per purchasing user per month since their acquisition.",
-        ),
-        TableSpec(
             "customer_window_facts",
             ("user_id", "orders", "revenue", "cost", "gross_value"),
             "One row per user who ordered within their own first 90 days.",

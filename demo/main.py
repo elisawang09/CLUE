@@ -2,10 +2,11 @@ import streamlit as st
 from components.main_view import render_main_view
 from components.simulator_view import render_simulator_view
 from components.styles import inject_app_styles
-# The baseline dashboard links in with ?metric= (still "PLTV", from before the
-# metric was renamed). CLUE explains one metric and names it in the top bar, so
-# the parameter is accepted and ignored -- the handoff works whatever it says,
-# and no link can land a participant on an empty page.
+# The baseline dashboard links in with ?metric=, ?start= and ?end=. CLUE
+# explains one metric and names it in the top bar, so ?metric= is accepted and
+# ignored -- the handoff works whatever it says, and no link can land a
+# participant on an empty page. The period is read in data/metrics.py, which
+# falls back to the dashboard's own default when it is absent or malformed.
 
 def _inject_primary_button_style() -> None:
     """Apply consistent styling for primary buttons across the app."""

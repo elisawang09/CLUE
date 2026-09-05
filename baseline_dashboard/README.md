@@ -246,9 +246,11 @@ So: **precompute the shape, compute the ratios on demand.**
   (7,137 rows) and `customer_window_facts.parquet` (2,527 rows, one per user who
   ordered inside their own 90 days). Aggregating ~10 K rows is milliseconds, for
   any filter.
-- `customer_age_facts.parquet` is still built but no longer read by the
-  dashboard — 90 days is not three anniversary months, so a month-grain table
-  cannot express the window. CLUE reads it directly, which is why it stays.
+- The old month-grain `customer_age_facts` table is gone. 90 days is not three
+  anniversary months, so a month-grain table cannot express the window, and once
+  CLUE moved onto the same 90-day definition nothing read it at all. The
+  `customer_age_month` column stays on `orders` — it costs one int64 per row and
+  is the natural way to read an order row by hand.
 - **`@st.cache_data`** on the loaders and the filtered aggregate.
 
 The 2 M-row `orders` and 3 M-row `order_items` tables are touched *only* by the
@@ -298,11 +300,13 @@ tests/                       128 unittest tests
   `metrics/registry.py`; only `customer_value` is mapped today
 - **What gets logged** — `study/events.py` and the `log_event` call sites
 
-## Known gap
+## The handoff to CLUE
 
-CLUE is still built around **PLTV** (`Probability of Active × Expected # Orders ×
-Expected Order Value`), whose components differ from this dashboard's 90-Day
-Customer Value. A participant following the link lands on a related but not
-identical metric. Realigning it means rewriting `demo/data/graph_data.py`'s
-nodes, simulation deltas, and transformation flows — worth doing before the
-study runs.
+"Open in CLUE" carries three things: the metric name, the reference acquisition
+period, and the session token. CLUE applies the same rule the cards do — the
+headline describes the *last month in the period* — so both apps explain the
+same cohort and the same number. A participant who narrows the filter and then
+clicks through sees what they were looking at, not a pinned default.
+
+CLUE's own test suite asserts the two agree, factor for factor and bar for bar,
+across more than one period.

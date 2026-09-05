@@ -3,7 +3,7 @@ import streamlit as st
 # The metric CLUE explains. Participants arrive from the baseline dashboard
 # with this metric already chosen, so there is no selector here -- every view
 # checks against this name rather than a literal.
-PRIMARY_METRIC = "6-Month Customer Value"
+PRIMARY_METRIC = "90-Day Customer Value"
 
 
 def render_top_view(button_text: str, view_type: str) -> None:

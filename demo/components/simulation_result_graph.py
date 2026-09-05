@@ -24,10 +24,37 @@ from data.graph_data import SimulationDelta, simulation_deltas
 from utils.graph_builders import build_simulation_flow_elements
 
 # ---------------------------------------------------------------------------
-# Session-state cache key
+# Session-state cache
 # ---------------------------------------------------------------------------
 
 _SIM_GRAPH_KEY = "sim_graph_state"
+
+# Cached flow states are kept per distinct scenario. Selecting scenarios is now
+# the whole interaction, so the cache would otherwise grow a permanent entry
+# for every set of assumptions a participant ever looked at -- including every
+# step of a slider drag. Six is the size of the scenario list.
+_MAX_CACHED_GRAPHS = 6
+_ORDER_KEY = "sim_graph_order"
+
+
+def _signature(deltas: dict[str, SimulationDelta]) -> str:
+    """A stable id for one set of node deltas."""
+    return str(hash(repr(sorted(deltas.items()))))
+
+
+def _cached_state(signature: str, deltas: dict[str, SimulationDelta]):
+    """Flow state for these deltas, building it once and evicting the oldest."""
+    cache_key = f"{_SIM_GRAPH_KEY}_{signature}"
+    order: list[str] = st.session_state.setdefault(_ORDER_KEY, [])
+
+    if cache_key not in st.session_state:
+        nodes, edges = build_simulation_flow_elements(deltas=deltas)
+        st.session_state[cache_key] = StreamlitFlowState(nodes, edges)
+        order.append(cache_key)
+        while len(order) > _MAX_CACHED_GRAPHS:
+            st.session_state.pop(order.pop(0), None)
+
+    return st.session_state[cache_key]
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -47,20 +74,16 @@ def render_simulation_graph(
         custom dict to reflect dynamically computed simulation results.
     """
     effective_deltas = deltas if deltas is not None else simulation_deltas()
+    signature = _signature(effective_deltas)
+    state: StreamlitFlowState = _cached_state(signature, effective_deltas)
 
-    if deltas is None:
-        cache_key = _SIM_GRAPH_KEY
-    else:
-        cache_key = f"{_SIM_GRAPH_KEY}_{hash(repr(sorted(deltas.items())))}"
-
-    if cache_key not in st.session_state:
-        nodes, edges = build_simulation_flow_elements(deltas=effective_deltas)
-        st.session_state[cache_key] = StreamlitFlowState(nodes, edges)
-
-    state: StreamlitFlowState = st.session_state[cache_key]
-
+    # The component key carries the signature. A fixed key with a changing
+    # state leaves the previously mounted graph on screen -- harmless when
+    # simulating was a button press, but selecting scenarios is now the whole
+    # interaction, so a stale graph would be the first thing anyone noticed.
+    # transformation_graph.py keys per node for the same reason.
     streamlit_flow(
-        key="simulation_result",
+        key=f"simulation_result_{signature}",
         state=state,
         height=460,
         fit_view=True,

@@ -160,7 +160,7 @@ def _render_menu(
         # The manipulated variable: present only in the CLUE condition, and only
         # for metrics that have a counterpart over there.
         if session.clue_enabled:
-            url = clue_url_for(metric_id, session)
+            url = clue_url_for(metric_id, session, metrics.cohort)
             if url and is_clue_running(base_url()):
                 st.link_button("Open in CLUE ↗", url, width="stretch")
             elif url:

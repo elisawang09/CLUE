@@ -38,17 +38,6 @@ def load_customers() -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_age_facts() -> pd.DataFrame:
-    """
-    Per-user, per-age-month orders and gross value.
-
-    The dashboard no longer slices by age month, so nothing here reads this.
-    It is kept because CLUE reads the same table directly.
-    """
-    return _read("customer_age_facts")
-
-
-@st.cache_data(show_spinner=False)
 def load_window_facts() -> pd.DataFrame:
     """
     Per-user totals over their own first 90 days -- the table every KPI is

@@ -14,7 +14,6 @@ dashboard's data source, not the upstream pipeline.
 
 Outputs, in data/modeled/:
     customers.parquet             one row per acquired user
-    customer_age_facts.parquet    one row per (purchasing user, age month)
     customer_window_facts.parquet one row per purchasing user, first 90 days
     orders.parquet              one row per order
     order_items.parquet         one row per order line
@@ -43,11 +42,6 @@ from datasource.synthesize import (
 
 RAW_DIR = Path(__file__).resolve().parent.parent / "data"
 MODELED_DIR = RAW_DIR / "modeled"
-
-# Age months retained in the month-grain aggregation table. The dashboard no
-# longer slices by age month, but CLUE still reads this table, so it is still
-# built.
-MAX_AGE_MONTH = 12
 
 # The dashboard's observation window, in days from each user's own acquisition
 # date. Day 0 is the acquisition day, so the window is offsets 0..89.
@@ -248,24 +242,6 @@ def attach_age(orders: pd.DataFrame, customers: pd.DataFrame) -> pd.DataFrame:
     return orders.drop(columns="acquisition_at")
 
 
-def build_age_facts(orders: pd.DataFrame) -> pd.DataFrame:
-    """
-    The aggregation table every KPI and both charts are computed from.
-
-    One row per (purchasing user, age month) for the first MAX_AGE_MONTH
-    months -- a few tens of thousands of rows, so any reference period and
-    observation window can be aggregated instantly.
-    """
-    window = orders[orders.customer_age_month <= MAX_AGE_MONTH]
-    facts = (
-        window.groupby(["user_id", "customer_age_month"], observed=True)
-        .agg(orders=("order_id", "size"), gross_value=("gross_value", "sum"))
-        .reset_index()
-    )
-    facts["gross_value"] = facts.gross_value.round(2)
-    return facts.sort_values(["user_id", "customer_age_month"], ignore_index=True)
-
-
 def build_window_facts(orders: pd.DataFrame) -> pd.DataFrame:
     """
     Per-user totals over the first WINDOW_DAYS days -- the table every KPI is
@@ -451,9 +427,6 @@ def main() -> None:
     _log("Attaching customer age...")
     orders = attach_age(orders, customers)
 
-    _log("Aggregating age facts...")
-    age_facts = build_age_facts(orders)
-
     _log(f"Aggregating {WINDOW_DAYS}-day window facts...")
     window_facts = build_window_facts(orders)
 
@@ -462,7 +435,6 @@ def main() -> None:
     order_items.to_parquet(MODELED_DIR / "order_items.parquet", index=False)
     orders.to_parquet(MODELED_DIR / "orders.parquet", index=False)
     customers.to_parquet(MODELED_DIR / "customers.parquet", index=False)
-    age_facts.to_parquet(MODELED_DIR / "customer_age_facts.parquet", index=False)
     window_facts.to_parquet(
         MODELED_DIR / "customer_window_facts.parquet", index=False
     )
@@ -474,7 +446,6 @@ def main() -> None:
         ("order_items", order_items),
         ("orders", orders),
         ("customers", customers),
-        ("customer_age_facts", age_facts),
         ("customer_window_facts", window_facts),
     ):
         _log(f"  {name:<20} {len(frame):>10,d}")

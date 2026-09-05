@@ -4,88 +4,119 @@ from .provenance_graph import render_provenance_graph
 from .transformation_graph import render_transformation_graph
 from data.metrics import (
     BaselineMetrics,
-    decimal,
     failed_checks,
     load_baseline,
     md,
     money,
     node_values,
-    percent,
 )
 from utils.graph_styles import legend_style_html, transformation_legend_style_html
 from utils.tooltip_overlay import inject_tooltip_overlay
 
 
-def _reference_caption(baseline: BaselineMetrics) -> str:
-    """One line naming the acquisition group these numbers describe."""
-    return (
-        f"Historical baseline · {baseline.acquired_users:,} users acquired "
-        f"{baseline.period_label}, each observed for their own first "
-        f"{baseline.window} months."
-    )
-
-
-def _build_accumulation_values(baseline: BaselineMetrics) -> list[dict[str, object]]:
+def _build_chart_values(baseline: BaselineMetrics) -> list[dict[str, object]]:
     """
-    Value accumulated per acquired user by each month after acquisition.
+    One row per acquisition month in the reference period.
 
-    Months are counted from each user's own acquisition date, so month 6 is the
-    end of every user's observation window and lands on the headline value.
+    This is the chart the participant just left on the baseline dashboard, so
+    they arrive in CLUE looking at the same shape they clicked from -- with the
+    month CLUE explains picked out of it.
     """
-    last = baseline.window
     return [
         {
-            "month": f"Month {month}",
-            "value": round(value, 2),
-            "is_last": month == last,
+            "month": point.month_label,
+            "value": round(point.customer_value, 2),
+            "is_focus": point.is_focus,
         }
-        for month, value in zip(baseline.months, baseline.cumulative_value)
+        for point in baseline.by_month
     ]
 
 
-def _build_accumulation_vega_spec(baseline: BaselineMetrics) -> dict:
-    """Vega-Lite spec for the accumulation line with its final point highlighted."""
-    ceiling = max(baseline.cumulative_value or [0.0]) * 1.15 or 1.0
+def _build_chart_vega_spec(baseline: BaselineMetrics) -> dict:
+    """
+    Vega-Lite spec for the acquisition-month columns.
+
+    The explained month is drawn in CLUE's accent and every other month is
+    muted: the emphasis is what ties the headline above to a bar below. Only
+    that bar is labelled, because it is the one number the card is about.
+    """
+    values = [point.customer_value for point in baseline.by_month] or [0.0]
+    ceiling = max(values) * 1.2 or 1.0
+    focus_colour = "#2F3E7C"
+    muted_colour = "#C9CDD3"
+
+    x_encoding = {
+        "field": "month",
+        "type": "ordinal",
+        "sort": None,
+        "axis": {
+            "title": "User Acquisition Month",
+            "labelAngle": 0 if len(baseline.by_month) <= 8 else -45,
+            "labelColor": "#7B7F87",
+            "titleColor": "#7B7F87",
+            "grid": False,
+        },
+    }
+    y_encoding = {
+        "field": "value",
+        "type": "quantitative",
+        "scale": {"domain": [0, ceiling]},
+        "axis": {
+            "title": None,
+            "format": "$,.0f",
+            "tickCount": 5,
+            "labelColor": "#7B7F87",
+            "gridColor": "#E5E7EB",
+        },
+    }
+
     return {
         "height": 200,
         "layer": [
             {
-                "mark": {"type": "line", "color": "#2F3E7C", "strokeWidth": 4},
+                "mark": {
+                    "type": "bar",
+                    "cornerRadiusTopLeft": 4,
+                    "cornerRadiusTopRight": 4,
+                },
                 "encoding": {
-                    "x": {
-                        "field": "month",
-                        "type": "ordinal",
-                        "sort": None,
-                        "axis": {"title": None, "labelAngle": 0, "labelColor": "#7B7F87", "grid": False},
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "color": {
+                        "condition": {
+                            "test": "datum.is_focus",
+                            "value": focus_colour,
+                        },
+                        "value": muted_colour,
                     },
-                    "y": {
+                    "tooltip": [
+                        {"field": "month", "type": "ordinal",
+                         "title": "User Acquisition Month"},
+                        {"field": "value", "type": "quantitative",
+                         "title": PRIMARY_METRIC, "format": "$,.2f"},
+                    ],
+                },
+            },
+            {
+                "mark": {
+                    "type": "text",
+                    "dy": -8,
+                    "fontSize": 12,
+                    "fontWeight": "bold",
+                    "color": "#111111",
+                },
+                "encoding": {
+                    "x": x_encoding,
+                    "y": y_encoding,
+                    "text": {
                         "field": "value",
                         "type": "quantitative",
-                        "scale": {"domain": [0, ceiling]},
-                        "axis": {
-                            "title": None,
-                            "format": "$,.0f",
-                            "tickCount": 6,
-                            "labelColor": "#7B7F87",
-                            "gridColor": "#E5E7EB",
-                        },
+                        "format": "$,.2f",
                     },
-                },
-            },
-            {
-                "mark": {"type": "point", "filled": True, "size": 1800, "color": "#C9CDD3", "opacity": 0.75},
-                "encoding": {
-                    "x": {"field": "month", "type": "ordinal", "sort": None},
-                    "y": {"field": "value", "type": "quantitative"},
-                    "opacity": {"condition": {"test": "datum.is_last", "value": 0.75}, "value": 0},
-                },
-            },
-            {
-                "mark": {"type": "point", "filled": True, "size": 110, "color": "#111111"},
-                "encoding": {
-                    "x": {"field": "month", "type": "ordinal", "sort": None},
-                    "y": {"field": "value", "type": "quantitative"},
-                    "opacity": {"condition": {"test": "datum.is_last", "value": 1}, "value": 0},
+                    "opacity": {
+                        "condition": {"test": "datum.is_focus", "value": 1},
+                        "value": 0,
+                    },
                 },
             },
         ],
@@ -94,41 +125,47 @@ def _build_accumulation_vega_spec(baseline: BaselineMetrics) -> dict:
 
 
 def _render_metric_overview(baseline: BaselineMetrics) -> None:
-    """Render the main overview card with the value accumulation chart."""
+    """Render the main overview card with the acquisition-month chart."""
     with st.container(border=True, height=350, key="card_main_overview"):
         st.subheader("Metric Overview")
         st.markdown(
             f"###### {PRIMARY_METRIC}: {md(money(baseline.customer_value))} per acquired user"
         )
         st.vega_lite_chart(
-            _build_accumulation_values(baseline),
-            _build_accumulation_vega_spec(baseline),
+            _build_chart_values(baseline),
+            _build_chart_vega_spec(baseline),
             use_container_width=True,
         )
-        st.caption(_reference_caption(baseline))
 
 
 def _render_ai_explanation(baseline: BaselineMetrics) -> None:
-    """Render a concise bullet-style explanation for the selected metric."""
+    """
+    Say what the metric means, not what it currently is.
+
+    The figures are already on the card above, in the provenance graph, and on
+    the dashboard this hands over from. Repeating them here made the panel long
+    enough that the explanation itself got lost, and gave three places for the
+    same number to disagree.
+    """
     with st.container(border=True, height=450, key="card_main_explanation"):
         st.subheader("AI-Generated Explanation")
         st.markdown(
             f"""
-**{PRIMARY_METRIC}** shows the average value generated per acquired user during
-the first 6 months after acquisition. It is calculated from three factors:
-  - the percentage of acquired users who make at least one purchase within
-    6 months — currently **{percent(baseline.conversion_rate)}**
-  - the average number of orders placed by those purchasing customers —
-    currently **{decimal(baseline.orders_per_purchasing_customer)}**
-  - the average value generated per order — currently
-    **{md(money(baseline.average_order_value))}**
+**{PRIMARY_METRIC}** is the average value a newly acquired user generates in
+their first {baseline.window_days} days. Three things decide it:
 
-Multiplying the three gives **{md(money(baseline.customer_value))}** per acquired user.
-Every user acquired in the reference period counts toward that average, including
-those who never placed an order.
+- **Purchase conversion** — how many of the acquired users buy at all inside
+  that window
+- **Order frequency** — how often those customers come back
+- **Average order value** — what each order is worth once its costs are taken out
 
-The value shown here is calculated from the selected historical acquisition group:
-users acquired {baseline.period_label}.
+The three multiply together to give the headline. Every acquired user counts
+toward the average, including those who never order — that is what makes it a
+value *per acquired user* rather than per customer.
+
+The figure describes users acquired in **{baseline.cohort_label}**, the most
+recent month in the reference period. The chart above places that month among
+its neighbours.
 """
         )
 

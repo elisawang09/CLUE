@@ -53,10 +53,6 @@ class MetricDef:
     # Name of the corresponding metric in CLUE, or None when it has no
     # counterpart there yet. Only metrics with one offer an "Open in CLUE"
     # menu item, so extending the handoff to another card is a one-line change.
-    #
-    # NOTE: CLUE is still built around PLTV, whose components differ from this
-    # dashboard's. Realigning it is separate follow-up work; until then this
-    # mapping hands over to a related but not identical metric.
     clue_metric: str | None = None
 
 
@@ -114,7 +110,7 @@ _register(
         grain=CUSTOMER_GRAIN,
         unit="per acquired user",
         is_card=True,
-        clue_metric="PLTV",
+        clue_metric="90-Day Customer Value",
         notes=lambda m: (
             f"Equivalently: Total Gross Order Value ÷ Acquired Users = "
             f"{money(m.total_gross_order_value)} ÷ {count(m.acquired_users)}."

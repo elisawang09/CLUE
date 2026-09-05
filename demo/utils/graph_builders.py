@@ -19,7 +19,7 @@ from data.graph_data import (
     EDGES,
     LEAF_IDS,
     NODES,
-    TRANSFORMATION_FLOWS,
+    transformation_flow,
     SimulationDelta,
     simulation_deltas,
 )
@@ -253,14 +253,14 @@ def build_transformation_flow_elements(
     ----------
     leaf_node_id :
         The leaf node ID whose transformation pipeline should be rendered.
-        Returns empty lists when None or not found in TRANSFORMATION_FLOWS.
+        Returns empty lists when None or the leaf has no flow.
     """
     from streamlit_flow.elements import StreamlitFlowEdge, StreamlitFlowNode
 
-    if not leaf_node_id or leaf_node_id not in TRANSFORMATION_FLOWS:
+    trans_nodes, trans_edges = transformation_flow(leaf_node_id)
+    if not trans_nodes:
         return [], []
 
-    trans_nodes, trans_edges = TRANSFORMATION_FLOWS[leaf_node_id]
 
     TY_SCALE             = 140
     TX_OFFSET, TY_OFFSET = 20, 40
