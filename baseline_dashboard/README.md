@@ -28,7 +28,7 @@ Dependencies are already in the repo's `.venv` (streamlit, pandas, numpy,
 altair, pyarrow). Nothing new was added.
 
 ```bash
-python -m unittest discover tests      # 128 tests
+python -m unittest discover tests      # 143 tests
 ```
 
 ## Running a study session
@@ -144,10 +144,11 @@ a shorter window and quietly understate the metric.
 acquisition day, so the first 90 days are offsets 0–89. It is date-granular, so
 the boundary falls at midnight rather than at the acquisition time of day.
 
-Consistency checks run at load and after every filter change, covering both the
-headline against its own factors and every charted month against the same two
-identities. If they ever disagree, the dashboard says so in a banner rather than
-showing a plausible wrong number.
+Consistency checks run at load and after every filter change, covering the
+headline against its own factors, every charted month against the same two
+identities, and the cards against the latest charted month. If they ever
+disagree, the dashboard says so in a banner rather than showing a plausible
+wrong number.
 
 ## Layout
 
@@ -279,11 +280,11 @@ datasource/
 metrics/
   registry.py                names, descriptions, expression tokens, formats
   compute.py                 period → per-month table, KPIs, both charts
-  checks.py                  the four consistency assertions
+  checks.py                  the five consistency assertions
 components/
   styles.py header.py filters.py kpi_cards.py charts.py
   underlying_data.py         Summary / Underlying rows + CSV export
-tests/                       128 unittest tests
+tests/                       143 unittest tests
 ```
 
 ## Where to edit what

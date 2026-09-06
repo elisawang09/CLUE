@@ -89,7 +89,7 @@ not on `PATH`.
 cd baseline_dashboard && ../.venv/bin/python -m unittest discover tests
 ```
 
-134 tests. They redirect their own logging to a temp directory, so running them
+143 tests. They redirect their own logging to a temp directory, so running them
 never contaminates study data.
 
 ## Notes
@@ -99,6 +99,7 @@ never contaminates study data.
 - Full dashboard documentation, including the metric definitions and the
   synthesized fields, is in
   [`baseline_dashboard/README.md`](baseline_dashboard/README.md).
-- **Known gap:** CLUE is still built around PLTV, whose components differ from
-  the dashboard's 6-Month Customer Value, so following the link lands on a
-  related but not identical metric. Worth aligning before the study runs.
+- CLUE and the dashboard are aligned on the same metric, **90-Day Customer
+  Value**, computed the same way in both apps, so following the "Open in
+  CLUE" link explains the exact number the dashboard just showed. See
+  [`demo/README.md`](demo/README.md) for CLUE's own documentation.

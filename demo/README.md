@@ -110,8 +110,8 @@ Main function:
 Main dashboard (non-simulator) view.
 
 What it does:
-- Shows overview card, explanation card, provenance card, and transformation card.
-- Shows content when the selected metric is `PRIMARY_METRIC` (90-Day Customer Value).
+- Shows overview card, explanation card, provenance card, and transformation card, all for
+  `PRIMARY_METRIC` (90-Day Customer Value) — the only metric CLUE currently explains.
 - The explanation says what the metric *means*, not what it currently is. The figures are already
   on the overview card, in the provenance graph, and on the dashboard this hands over from —
   repeating them made the panel long enough that the explanation got lost, and gave three places
@@ -123,7 +123,6 @@ What it does:
 - Surfaces failed consistency checks as an error banner.
 
 Main helpers:
-- `_is_customer_value_selected()`
 - `_build_chart_values()`
 - `_build_chart_vega_spec()`
 - `_render_metric_overview()`
@@ -170,11 +169,11 @@ What it does:
 Main helpers:
 - `_initialize_simulator_state()`
 - `_render_step_slider()` — the planning goal
-- `_render_controls_row()`, `_render_scenario_readout()`
-- `_render_controls_row()`, `_render_scenario_strip()`, `_render_comparison_and_results()`,
-  `_render_scenario_list()`, `_render_results_column()`, `comparison_cards()`
+- `_render_controls_row()`, `_render_scenario_strip()`, `_pathway_rows()`
+- `comparison_cards()`, `scenario_to_simulate()`, `selected_card_title()`,
+  `_toggle_card()`, `_remove_card()`
+- `_render_comparison_and_results()`, `_render_scenario_list()`, `_render_results_column()`
 - `_assumption_lines()`, `_consequence_lines()`, `_result_lines()`
-- `_render_simulation_output_panel()`
 - `render_simulator_view()`
 
 ### data/scenario.py
@@ -207,7 +206,9 @@ what makes the counts comparable across cards.
 
 ### utils/slider_calculations.py
 Session-state plumbing for the scenario controls: `initialize_scenario_state()`,
-`current_scenario()`, `load_scenario()`, `slider_bounds()`, `uplift_percent()`.
+`current_scenario()`, `slider_bounds()`, `uplift_percent()`, plus the pin/compare rail —
+`pinned_scenarios()`, `next_scenario_name()`, `can_pin()`, `pin_scenario()`, `remove_pinned()`,
+`selected_card_id()`, `select_card()`.
 
 ### components/styles.py
 Global style system and small HTML helpers.
@@ -224,13 +225,15 @@ Main helpers:
 - `get_detail_box_html(content)`
 - `get_selected_text_style()`
 - `get_checkbox_label_html(label, is_selected=False)`
+- Scenario rail/strip markup used by `components/simulator_view.py`:
+  `scenario_rail_css()`, `scenario_row_html()`, `scenario_strip_head_html()`,
+  `scenario_strip_stats_html()`, `scenario_hint_html()`, `result_block_html()`
 
 ## Session State Keys
 
 Common keys used in the app:
 - `active_view`: `main` or `simulator`
 - `selected_node`: provenance leaf whose transformation flow is shown
-- `simulation_started`: controls output panel behavior
 - `sim_uplift`, `sim_uplift_input`: planning goal, as a % above the historical baseline
 - `sim_conversion`, `sim_orders_per_cust`, `sim_order_value`: the three scenario assumptions
 - `sim_pinned_scenarios`: pinned pathway cards, as (name, Scenario) snapshots
