@@ -42,3 +42,4 @@ baseline_dashboard/data/
 # Study session assignments and interaction logs (participant data).
 baseline_dashboard/study/sessions.json
 baseline_dashboard/logs/
+.claude/
