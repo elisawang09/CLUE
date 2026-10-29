@@ -11,6 +11,7 @@ used to evaluate it.
 |---|---|
 | [`baseline_dashboard/`](baseline_dashboard/) | The **Customer Value Dashboard** participants use. Runs in both study conditions. |
 | [`demo/`](demo/) | **CLUE** — the metric provenance graph, transformation views, and simulator. |
+| [`vercel/`](vercel/) | Static port of both apps as one Vercel site, for demos. No study logging or participant links. |
 | [`VLDB 2026 Demo/`](VLDB%202026%20Demo/) | Paper source. |
 
 The two apps share no code. The dashboard links to CLUE by URL only.

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer Value Dashboard</title>
+  <meta name="description" content="Customer Value Dashboard — E-commerce Growth Overview">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Crect x='7' y='15' width='4' height='10' rx='1' fill='white'/%3E%3Crect x='14' y='10' width='4' height='15' rx='1' fill='white'/%3E%3Crect x='21' y='6' width='4' height='19' rx='1' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/vega@5.30.0/build/vega.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.21.0/build/vega-lite.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.26.0/build/vega-embed.min.js"></script>
+  <script type="module" src="/assets/dashboard.js"></script>
+</head>
+<body>
+  <main class="bd-page">
+    <header>
+      <h1 class="bd-title">Customer Value Dashboard</h1>
+      <p class="bd-subtitle">E-commerce Growth Overview</p>
+    </header>
+
+    <section class="card bd-filter" aria-label="Filters">
+      <div class="bd-filter-controls">
+        <p class="bd-filter-label">Reference Acquisition Period</p>
+        <div class="bd-filter-selects">
+          <label>From <select id="filter-start"></select></label>
+          <label>To <select id="filter-end"></select></label>
+        </div>
+      </div>
+      <p class="bd-caption" id="filter-caption"></p>
+    </section>
+    <div class="bd-warning" id="filter-warning" role="status" hidden></div>
+    <div class="bd-error-banner" id="checks" role="alert" hidden></div>
+
+    <div class="bd-kpis" id="kpi-cards"></div>
+
+    <div class="bd-charts">
+      <section class="card bd-chart-panel">
+        <h2 class="bd-chart-title">90-Day Customer Value by Acquisition Month</h2>
+        <p class="bd-chart-subtitle">Average value per acquired user in their first 90 days, one column per acquisition month</p>
+        <div class="bd-chart" id="chart-customer-value"></div>
+      </section>
+      <section class="card bd-chart-panel">
+        <h2 class="bd-chart-title">90-Day Purchase Conversion Rate by Acquisition Month</h2>
+        <p class="bd-chart-subtitle">Share of each month's acquired users who ordered within their first 90 days</p>
+        <div class="bd-chart" id="chart-conversion"></div>
+      </section>
+    </div>
+
+    <p class="bd-caption bd-footer" id="footer-caption"></p>
+  </main>
+
+  <dialog class="bd-dialog" id="underlying-dialog" aria-labelledby="underlying-title">
+    <div class="bd-dialog-head">
+      <h2 id="underlying-title">View Underlying Data</h2>
+      <button type="button" class="bd-icon-button" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="bd-dialog-body"></div>
+    <div class="bd-dialog-foot">
+      <button type="button" class="bd-button" data-close>Close</button>
+    </div>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,424 @@
+/* Dashboard styles. Tokens and rules from baseline_dashboard/components/styles.py. */
+
+:root {
+  color-scheme: light;
+  --series: #2a78d6;
+  --series-muted: #a9c8ee;
+  --series-dark: #1c5aa6;
+  --positive: #1B7F4B;
+  --negative: #B3261E;
+  --page-bg: #F7F9FC;
+  --surface: #FFFFFF;
+  --border: #E3E8EF;
+  --grid: #EEF1F6;
+  --text-primary: #1B2A4E;
+  --text-secondary: #5B6472;
+  --text-muted: #8A93A3;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-family: var(--font);
+}
+
+.bd-page {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+.bd-title {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0;
+}
+.bd-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0;
+}
+
+.bd-caption {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Filter ------------------------------------------------------------------ */
+
+.bd-filter {
+  display: grid;
+  grid-template-columns: 2.4fr 3.6fr;
+  gap: 1.5rem;
+  align-items: end;
+}
+.bd-filter-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--series);
+  margin: 0 0 0.4rem;
+}
+.bd-filter-selects {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.bd-filter-selects label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+select, input[type="number"] {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: #F0F2F6;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+}
+select:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--series);
+  outline-offset: 1px;
+}
+
+.bd-warning, .bd-error-banner {
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+}
+.bd-warning { background: #FFF8E1; color: #7A5B00; }
+.bd-error-banner { background: #FDECEA; color: var(--negative); }
+.bd-error-banner ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+
+/* KPI cards --------------------------------------------------------------- */
+
+.bd-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.bd-kpi {
+  min-height: 218px;
+  display: flex;
+  flex-direction: column;
+}
+.bd-kpi.is-selected {
+  border: 1.5px solid var(--series);
+  box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.12);
+}
+.bd-kpi-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+/* Reserve three lines so card values line up; title hover shows the description. */
+.bd-kpi-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--series);
+  margin: 0 0 0.4rem;
+  line-height: 1.3;
+  min-height: 3.9em;
+  cursor: help;
+}
+.bd-kpi-label:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.bd-kpi-month {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 0.15rem;
+  min-height: 1.1em;
+}
+.bd-kpi-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.bd-kpi-value.is-primary { font-size: 2.4rem; }
+.bd-kpi-unit {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  min-height: 1.2em;
+}
+.bd-kpi-delta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 0.3rem;
+  min-height: 1.2em;
+  line-height: 1.3;
+}
+.bd-kpi-delta.is-up { color: var(--positive); }
+.bd-kpi-delta.is-down { color: var(--negative); }
+.bd-kpi-delta.is-flat { color: var(--text-muted); }
+.bd-delta-context { color: var(--text-muted); font-weight: 400; }
+
+/* Card ⋯ menu (st.popover in kpi_cards.py). */
+.bd-menu { position: relative; flex-shrink: 0; }
+.bd-menu-trigger {
+  display: grid;
+  place-items: center;
+  padding: 0.15rem 0.3rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  fill: currentColor;
+  cursor: pointer;
+}
+.bd-menu-trigger:hover, .bd-menu-trigger[aria-expanded="true"] {
+  background: var(--page-bg);
+  color: var(--series);
+}
+.bd-menu-body {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(27, 42, 78, 0.12);
+}
+.bd-menu-body[hidden] { display: none; }
+.bd-menu-item {
+  display: block;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--series);
+  text-align: left;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.bd-menu-item:hover { color: var(--series-dark); text-decoration: underline; }
+
+/* Charts ------------------------------------------------------------------ */
+
+.bd-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.bd-chart-panel { min-height: 425px; }
+.bd-chart-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  min-height: 1.5em;
+}
+/* Reserve two lines so both charts start at the same height. */
+.bd-chart-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0.15rem 0 0.6rem;
+  line-height: 1.4;
+  min-height: 2.8em;
+}
+.bd-chart { width: 100%; min-height: 300px; }
+.bd-chart-empty {
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 0 2rem;
+}
+.bd-footer { margin-top: 0.5rem; }
+
+/* View Underlying Data dialog ---------------------------------------------- */
+
+.bd-dialog {
+  width: min(1100px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(27, 42, 78, 0.25);
+  color: var(--text-primary);
+}
+.bd-dialog::backdrop { background: rgba(27, 42, 78, 0.35); }
+.bd-dialog[open] { display: flex; flex-direction: column; }
+.bd-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0.25rem;
+}
+.bd-dialog-head h2 { margin: 0; font-size: 1.4rem; }
+.bd-dialog-body {
+  padding: 0 1.5rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.bd-dialog-body h3 { margin: 0.5rem 0 0; font-size: 1.3rem; }
+.bd-dialog-subhead { font-weight: 700; margin: 0.5rem 0 0; }
+.bd-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
+.bd-icon-button {
+  border: none;
+  background: none;
+  font-size: 1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+.bd-icon-button:hover { background: var(--page-bg); color: var(--text-primary); }
+.bd-button {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.bd-button:hover { border-color: var(--series); color: var(--series); }
+
+.bd-tab-panel:not([hidden]) { display: flex; flex-direction: column; gap: 0.75rem; }
+.bd-tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--border); }
+.bd-tabs button {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.bd-tabs button.is-active { color: var(--series); border-bottom-color: var(--series); }
+
+.bd-grain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.bd-grain legend { font-size: 0.875rem; margin-bottom: 0.35rem; padding: 0; }
+.bd-grain label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+.bd-grain input { accent-color: var(--series); }
+.bd-row-count {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  max-width: 220px;
+}
+
+.bd-rows-table {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.bd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.bd-tab-panel > .bd-table { border: 1px solid var(--border); border-radius: 8px; }
+.bd-table th, .bd-table td {
+  padding: 0.4rem 0.7rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--grid);
+}
+.bd-table th {
+  position: sticky;
+  top: 0;
+  background: var(--page-bg);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.bd-table .num { text-align: right; }
+.bd-table td:first-child, .bd-table td:nth-child(2) { font-family: var(--mono); font-size: 0.8rem; }
+.bd-tab-panel > .bd-table td { font-family: var(--font); font-size: 0.85rem; }
+.bd-loading, .bd-error { padding: 1.5rem; color: var(--text-muted); font-size: 0.9rem; }
+.bd-error { color: var(--negative); }
+
+/* Shared ------------------------------------------------------------------ */
+
+.fatal {
+  max-width: 640px;
+  margin: 4rem auto;
+  padding: 1.5rem;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #E3E8EF);
+  border-radius: 10px;
+  line-height: 1.6;
+}
+.fatal h2 { margin-top: 0; }
+
+/* Narrow screens ------------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  .bd-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .bd-page { padding: 1.5rem 16px 3rem; }
+  .bd-title { font-size: 2.1rem; }
+  .bd-filter { grid-template-columns: 1fr; gap: 0.75rem; }
+  .bd-charts { grid-template-columns: 1fr; }
+  .bd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bd-kpi { min-height: 0; }
+}
+@media (max-width: 480px) {
+  .bd-kpis { grid-template-columns: 1fr; }
+  .bd-kpi-label { min-height: 0; }
+}
